@@ -1,0 +1,14 @@
+{
+   // If the `black` command is not in the current environment variable, 
+   // you need to fill in its absolute path
+   "command": "black",
+
+   // Maximum length of each line
+   "max-line-length": 88,
+
+   // The python version used by the file to be formatted.
+   // If you fill in more than one, only the first one will take effect.
+   // Available Options:
+   //     [py27 py33 py34 py35 py36 py37 py38 py39]
+   "target-version": []
+}

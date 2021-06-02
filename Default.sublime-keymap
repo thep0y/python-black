@@ -1,0 +1,8 @@
+[
+    {
+        "keys": [
+            "ctrl+super+l"
+        ],
+        "command": "black"
+    },
+]

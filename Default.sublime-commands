@@ -1,0 +1,6 @@
+[
+    {
+        "caption": "Sublack: Format all",
+        "command": "black"
+    }
+]

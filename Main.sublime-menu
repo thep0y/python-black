@@ -1,0 +1,33 @@
+[
+    {
+        "id": "preferences",
+        "children": [
+            {
+                "caption": "Package Settings",
+                "mnemonic": "P",
+                "id": "package-settings",
+                "children": [
+                    {
+                        "caption": "Python Black",
+                        "children": [
+                            {
+                                "caption": "Settings",
+                                "command": "edit_settings",
+                                "args": {
+                                    "base_file": "${packages}/python-black/python-black.sublime-settings"
+                                },
+                            },
+                            {
+                                "caption": "Key Bindings",
+                                "command": "edit_settings",
+                                "args": {
+                                    "base_file": "${packages}/python-black/Default ($platform).sublime-keymap"
+                                },
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+]
