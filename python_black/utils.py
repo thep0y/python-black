@@ -4,7 +4,7 @@
 # @Email: thepoy@163.com
 # @File Name: utils.py
 # @Created: 2021-03-27 09:55:27
-# @Modified: 2021-06-02 16:28:21
+# @Modified: 2021-06-02 21:10:12
 
 import os
 import sublime
@@ -37,7 +37,7 @@ def get_project_setting_file(view: sublime.View) -> Optional[str]:
         view {sublime.View} -- curennt sublime.View
 
     Returns:
-        Optional[str] -- reutnr black config file, or return None
+        Optional[str] -- return black config file, or return None
     """
     project_settings_file = find_root_path_of_current_file(view, "pyproject.toml")
     if not project_settings_file:

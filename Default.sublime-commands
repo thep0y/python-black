@@ -1,6 +1,6 @@
 [
     {
-        "caption": "Sublack: Format all",
+        "caption": "python-black: format current file",
         "command": "black"
     }
 ]
