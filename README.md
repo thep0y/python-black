@@ -20,7 +20,7 @@ Press <kbd>Ctrl</kbd>+<kbd>Super</kbd>+<kbd>L</kbd> to format current file.
 
 ### Settings
 
-```json
+```
 {
    // If the `black` command is not in the current environment variable, 
    // you need to fill in its absolute path
