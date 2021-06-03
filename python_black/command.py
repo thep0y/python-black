@@ -17,6 +17,8 @@ class BlackCommand(sublime_plugin.TextCommand):
 
         command = settings.get("command")
 
+        # TODO: 改为对文件缓冲区，而不是直接整式化文件
+
         # TODO: 支持更多 black 选项
         max_line_length = settings.get("max-line-length")
         target_version = settings.get("target-version")

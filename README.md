@@ -16,11 +16,23 @@ You can install `python-black` with package control:
 
 ### Usage
 
-Press <kbd>Ctrl</kbd>+<kbd>Super</kbd>+<kbd>L</kbd> to format current file.
+In order to prevent conflicts with the key binding of other packages, no default key binding is provided.
+You can customize `python-black` key binding, and command is `black`.
+
+Example:
+
+```json
+{
+     "keys": [
+         "ctrl+super+l"
+     ],
+     "command": "black"
+}
+```
 
 ### Settings
 
-```
+```js
 {
    // If the `black` command is not in the current environment variable, 
    // you need to fill in its absolute path
