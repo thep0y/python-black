@@ -16,13 +16,6 @@
                                 "args": {
                                     "base_file": "${packages}/python-black/python-black.sublime-settings"
                                 },
-                            },
-                            {
-                                "caption": "Key Bindings",
-                                "command": "edit_settings",
-                                "args": {
-                                    "base_file": "${packages}/python-black/Default ($platform).sublime-keymap"
-                                },
                             }
                         ]
                     }
