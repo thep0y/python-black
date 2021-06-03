@@ -9,10 +9,20 @@ If you haven't install `black`, just install it:
 pip install black
 ```
 
-You can install `python-black` with package control:
+~~You can install `python-black` with package control:~~
 
-1. Open your command pallete and type `Package Control: Install Package`.
-2. Find this project `python-black` and press `Enter`.
+1. ~~Open your command pallete and type `Package Control: Install Package`.~~
+2. ~~Find this project `python-black` and press `Enter`.~~
+
+#### Local installation
+
+This package has not been uploaded to packagecontrol.io, so it needs to be installed locally:
+
+```shell
+git clone https://github.com/thep0y/python-black.git
+```
+
+Copy or move the `python-black` folder to the `packages` directory of **Sublime Text 4**.
 
 ### Usage
 
