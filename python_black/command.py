@@ -1,40 +1,36 @@
-import os
-
 import sublime
 import sublime_plugin
-
 from .constants import SETTINGS_FILE_NAME
-from .utils import get_project_setting_file
+from .utils import get_project_setting_file, black_format
 
 
 class BlackCommand(sublime_plugin.TextCommand):
+    def is_visible(self, *args):
+        return True
+
+    def get_selection(self):
+        region = self.view.sel()[0]
+        # select the whole view if there is no selected region
+        if region.a == region.b:
+            region = sublime.Region(0, self.view.size())
+        return region, self.view.substr(region), self.view.encoding()
+
     def run(self, edit: sublime.Edit):
-        current_file_path = self.view.file_name()
-        if not current_file_path.endswith(".py"):
-            return
-
+        region, source, encoding = self.get_selection()
+        if not isinstance(source, str) and hasattr(source, "decode"):
+            source = source.decode(encoding)
         settings = sublime.load_settings(SETTINGS_FILE_NAME)
-
         command = settings.get("command")
+        config_file = get_project_setting_file(self.view)
+        filename = self.view.file_name()
+        if filename:
+            # TODO: 异步格式化时会有 edit 不能在函数外部使用的错误，如何解决？
+            # fn = filename  # 为了消除 pyright 的错误提示，这行代码本身是多余的
+            # # set_timeout_async 方法会让 edit.edit_token 归零，在调用 view.replace 时，edit.edit_token 却不能为零
+            # sublime.set_timeout_async(
+            #     lambda: format(source, fn, region, encoding, edit, self.view, config_file=config_file),
+            #     FORMAT_TIMEOUT,
+            # )
 
-        # TODO: 改为对文件缓冲区，而不是直接整式化文件
-
-        # TODO: 支持更多 black 选项
-        max_line_length = settings.get("max-line-length")
-        target_version = settings.get("target-version")
-
-        result = os.popen("%s --version" % command).read()
-        if not result.startswith("black, version "):
-            raise Exception("command [ %s ] not found. Have you installed `black`?" % command)
-
-        black_config_file = get_project_setting_file(self.view)
-        if black_config_file:
-            cmd = f"{command} --config {black_config_file} {current_file_path}"
-        else:
-            if target_version:
-                cmd = f"{command} --line-length {max_line_length} --target-version {target_version[0]} {current_file_path}"
-            else:
-                cmd = f"{command} --line-length {max_line_length} {current_file_path}"
-
-        # TODO: 格式化成功的话，sublime 会重新加载当前文件，导致不会有任何输出
-        os.popen(cmd)
+            # 同步格式化
+            black_format(command, source, filename, region, encoding, edit, self.view, config_file=config_file)

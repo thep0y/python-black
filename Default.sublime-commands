@@ -1,6 +1,6 @@
 [
     {
-        "caption": "python-black: format current file",
+        "caption": "python-black: format the selected code or the code of the entire file",
         "command": "black"
     }
 ]

@@ -1,4 +1,10 @@
 Changelog
 -----------
+
+
+0.0.3:
+    - format code with buffer
+0.0.2:
+    - delete default key-map
 0.0.1:
     - init
