@@ -3,6 +3,8 @@
 
 It is recommended to use with [LSP-pyright](https://github.com/sublimelsp/LSP-pyright).
 
+![sample](https://cdn.jsdelivr.net/gh/thep0y/image-bed/md/1622805581360.png)
+
 ### Installation
 
 If you haven't install `black`, just install it:
