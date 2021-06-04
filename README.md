@@ -3,7 +3,7 @@
 
 It is recommended to use with [LSP-pyright](https://github.com/sublimelsp/LSP-pyright).
 
-<img src="https://cdn.jsdelivr.net/gh/thep0y/image-bed/md/1622805581360.png"></img>
+![output](https://cdn.jsdelivr.net/gh/thep0y/image-bed/md/1622806610596.png)
 
 ### Installation
 
