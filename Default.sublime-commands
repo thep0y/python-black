@@ -1,6 +1,10 @@
 [
     {
-        "caption": "python-black: format the selected code or the code of the entire file",
+        "caption": "python-black: Format the selected code or the code of the entire file",
         "command": "black"
+    },
+    {
+        "caption": "python-black: Create Black Configuration File",
+        "command": "black_create_configuration",
     }
 ]

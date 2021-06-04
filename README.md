@@ -1,5 +1,7 @@
 # python-black
-[Black](https://github.com/psf/black) formatter for  Sublime Text
+[Black](https://github.com/psf/black) formatter for  Sublime Text.
+
+It is recommended to use with [LSP-pyright](https://github.com/sublimelsp/LSP-pyright).
 
 ### Installation
 
@@ -26,6 +28,8 @@ Copy or move the `python-black` folder to the `packages` directory of **Sublime 
 
 ### Usage
 
+#### 1 key binding
+
 In order to prevent conflicts with the key binding of other packages, no default key binding is provided.
 You can customize `python-black` key binding, and command is `black`.
 
@@ -39,6 +43,16 @@ Example:
      "command": "black"
 }
 ```
+
+> :warning:Note: Do not **duplicate** the key binding of other packages
+
+#### 2 Create Black Configuration File
+
+You can quickly generate a black configuration file for the current project.
+
+| Command                                         | Description                                                  |
+| ----------------------------------------------- | ------------------------------------------------------------ |
+| `python-black: Create Black Configuration File` | Creates a `pyproject.toml` file in the root of the project with basic options. Opens the configuration file if it already exists. |
 
 ### Settings
 

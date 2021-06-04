@@ -2,7 +2,11 @@
     // Install LSP-json to get validation and autocompletion in this file.
     "venv": "black",
     "extraPaths": [
+        // macOS
         "/Applications/Sublime Text.app/Contents/MacOS/Lib/python38",
-        "/Users/thepoy/Library/Application Support/Sublime Text/Lib/python38"
+        "/Users/thepoy/Library/Application Support/Sublime Text/Lib/python38",
+        // linux
+        "/opt/sublime_text/Lib/python38",
+        "/home/thepoy/.config/sublime-text/Lib/python38"
     ]
 }

@@ -1,7 +1,12 @@
 Changelog
 -----------
 
-
+0.0.5:
+    - add a command to create a black configuration file
+    - modify the project structure
+    - add formatted status messages to the status bar
+0.0.4:
+    - add `.python-version` file use python 3.8
 0.0.3:
     - format code with buffer
 0.0.2:

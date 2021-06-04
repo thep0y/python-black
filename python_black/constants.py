@@ -4,7 +4,7 @@
 # @Email: thepoy@163.com
 # @File Name: constants.py
 # @Created: 2021-03-27 09:55:27
-# @Modified: 2021-06-03 23:35:41
+# @Modified: 2021-06-04 12:31:36
 
 PACKAGE_NAME = "python-black"
 SETTINGS_FILE_NAME = "%s.sublime-settings" % PACKAGE_NAME
@@ -19,3 +19,14 @@ CONFIG = "--config"
 TIMEOUT = 0
 FORMAT_TIMEOUT = 100
 STATUS_MESSAGE_TIMEOUT = 3000
+
+CONFIGURATION_FILENAME = "pyproject.toml"
+CONFIGURATION_CONTENTS = """[tool.black]
+line-length = 120
+target-version = ['py38']
+include = '\\.pyi?\\$'
+extend-exclude = '''
+# A regex preceded with ^/ will apply only to files and directories
+# in the root of the project.
+^/foo.py  # exclude a file named foo.py in the root of the project (in addition to the defaults)
+'''"""
