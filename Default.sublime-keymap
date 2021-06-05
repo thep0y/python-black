@@ -1,0 +1,17 @@
+[
+    /*
+     * In order to prevent conflicts with the key binding of other packages, 
+     * no default key binding is provided. 
+     * You can customize python-black key binding, and command is black.
+     *
+     * !!! Do not duplicate the key binding of other packages !!!
+     *
+     * Example:
+     *       {
+     *           "keys": [
+     *               "ctrl+alt+l"
+     *           ],
+     *           "command": "black"
+     *       }
+     */
+]

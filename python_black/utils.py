@@ -4,7 +4,7 @@
 # @Email: thepoy@163.com
 # @File Name: utils.py
 # @Created: 2021-03-27 09:55:27
-# @Modified: 2021-06-04 12:32:48
+# @Modified: 2021-06-05 23:45:18
 
 import os
 import subprocess
@@ -121,6 +121,7 @@ def find_root_path_of_current_file(view: sublime.View, filename: str) -> Optiona
 
 def get_project_setting_file(view: sublime.View) -> Optional[str]:
     """find `pyproject.toml` in root path of current window
+
     Arguments:
         view {sublime.View} -- curennt sublime.View
     Returns:
@@ -192,6 +193,7 @@ def black_format(
     config_file: str = None,
     preview: bool = False,
 ):
+    # black 格式化部分代码时因不能识别缩进，大概率会出错，出错时弹窗提醒
     sublime.status_message("black: formatting...")
     if config_file:
         cmd_result = popen([command, CODE, source, CONFIG, config_file])
@@ -209,4 +211,4 @@ def black_format(
         else:  # 不是预览的话直接格式化
             format_source_file(edit, out, filepath, view, region, encoding)
     else:
-        raise Exception(err)
+        sublime.error_message(err)

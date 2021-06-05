@@ -1,6 +1,8 @@
 Changelog
 -----------
 
+0.0.6
+    - add the function of automatic formatting on save
 0.0.5:
     - add a command to create a black configuration file
     - modify the project structure

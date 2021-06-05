@@ -4,7 +4,7 @@
 # @Email: thepoy@163.com
 # @File Name: commands.py
 # @Created: 2021-03-27 09:55:27
-# @Modified: 2021-06-04 12:31:29
+# @Modified: 2021-06-05 23:35:54
 
 import sublime
 import sublime_plugin
@@ -29,13 +29,20 @@ class BlackCommand(sublime_plugin.TextCommand):
         return region, self.view.substr(region), self.view.encoding()
 
     def run(self, edit: sublime.Edit):
+        filename = self.view.file_name()
+        if filename and not filename.endswith(".py"):
+            sublime.status_message(f"black: The current file is not a python script file: {filename}")
+            return
+        if not filename:
+            sublime.error_message("black: Unrecognized file name")
+            return
+
         region, source, encoding = self.get_selection()
         if not isinstance(source, str) and hasattr(source, "decode"):
             source = source.decode(encoding)
         settings = sublime.load_settings(SETTINGS_FILE_NAME)
         command = settings.get("command")
         config_file = get_project_setting_file(self.view)
-        filename = self.view.file_name()
         if filename:
             # TODO: 异步格式化时会有 edit 不能在函数外部使用的错误，如何解决？
             # fn = filename  # 为了消除 pyright 的错误提示，这行代码本身是多余的
@@ -83,3 +90,12 @@ class BlackCreateConfiguration(sublime_plugin.WindowCommand):
 
     def _on_view_loaded(self, view: sublime.View) -> None:
         view.run_command("insert_snippet", {"contents": CONFIGURATION_CONTENTS})
+
+
+class AutoFormatOnSave(sublime_plugin.EventListener):
+    def on_pre_save(self, view: sublime.View):
+        settings = sublime.load_settings(SETTINGS_FILE_NAME)
+        status = settings.get("format_on_save")
+        if status:
+            view.run_command("black")
+            sublime.status_message("black: Document is automatically formatted")

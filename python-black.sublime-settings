@@ -2,4 +2,7 @@
    // If the `black` command is not in the current environment variable, 
    // you need to fill in its absolute path
    "command": "black",
+
+   // Whether to automatically format the entire document when saving
+   "format_on_save": true,
 }
