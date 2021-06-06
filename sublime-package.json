@@ -9,7 +9,7 @@
           "properties": {
             "command": {
               "type": "string",
-              "default": "black",
+              "default": "",
               "markdownDescription": "Absolute path of the `black` command."
             },
             "format_on_save": {

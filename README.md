@@ -47,11 +47,17 @@ You can create custom key binding based on sample`Preferences - Package Settings
 
 There are two modifiable properties in settings:
 
-```json
+```js
 {
-   // If the `black` command is not in the current environment variable, 
-   // you need to fill in its absolute path
-   "command": "black",
+   // If you fill in the absolute path, the file will be formatted using 
+   // the package import method, otherwise, the `black` command will be 
+   // called to format the file. 
+   // It is recommended to use absolute path in windows system.
+   // So you can also directly fill in the black command:
+   //         "command": "black"
+   // It's just not recommended.
+   // `$` and `~` are not supported, please fill in the full path correctly
+   "command": "/absolute/path/black",
 
    // Whether to automatically format the entire document when saving
    "format_on_save": true,

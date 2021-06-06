@@ -4,7 +4,7 @@
 # @Email: thepoy@163.com
 # @File Name: commands.py
 # @Created: 2021-03-27 09:55:27
-# @Modified: 2021-06-06 08:23:42
+# @Modified: 2021-06-06 21:55:14
 
 import sublime
 import sublime_plugin
@@ -14,7 +14,7 @@ from os import path
 from typing import List
 
 from .python_black.constants import SETTINGS_FILE_NAME, CONFIGURATION_FILENAME, CONFIGURATION_CONTENTS
-from .python_black.utils import get_project_setting_file, black_format
+from .python_black.utils import black_format
 
 
 class BlackCommand(sublime_plugin.TextCommand):
@@ -29,6 +29,8 @@ class BlackCommand(sublime_plugin.TextCommand):
         return region, self.view.substr(region), self.view.encoding()
 
     def run(self, edit: sublime.Edit):
+        settings = sublime.load_settings(SETTINGS_FILE_NAME)
+        command = settings.get("command")
         filename = self.view.file_name()
         if filename and not filename.endswith(".py"):
             sublime.status_message(f"black: The current file is not a python script file: {filename}")
@@ -40,20 +42,10 @@ class BlackCommand(sublime_plugin.TextCommand):
         region, source, encoding = self.get_selection()
         if not isinstance(source, str) and hasattr(source, "decode"):
             source = source.decode(encoding)
-        settings = sublime.load_settings(SETTINGS_FILE_NAME)
-        command = settings.get("command")
-        config_file = get_project_setting_file(self.view)
         if filename:
-            # TODO: 异步格式化时会有 edit 不能在函数外部使用的错误，如何解决？
-            # fn = filename  # 为了消除 pyright 的错误提示，这行代码本身是多余的
-            # # set_timeout_async 方法会让 edit.edit_token 归零，在调用 view.replace 时，edit.edit_token 却不能为零
-            # sublime.set_timeout_async(
-            #     lambda: format(source, fn, region, encoding, edit, self.view, config_file=config_file),
-            #     FORMAT_TIMEOUT,
-            # )
-
-            # 同步格式化
-            black_format(command, source, filename, region, encoding, edit, self.view, config_file=config_file)
+            black_format(
+                command, source=source, filepath=filename, region=region, encoding=encoding, edit=edit, view=self.view
+            )
 
 
 class BlackCreateConfiguration(sublime_plugin.WindowCommand):
@@ -99,3 +91,12 @@ class AutoFormatOnSave(sublime_plugin.EventListener):
         if status:
             view.run_command("black")
             sublime.status_message("black: Document is automatically formatted")
+
+
+class BlackOutputCommand(sublime_plugin.TextCommand):
+    def run(self, edit, text):
+        self.view.insert(edit, 0, text)
+        self.view.end_edit(edit)
+
+    def is_visible(self, *args):
+        return False

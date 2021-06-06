@@ -1,6 +1,10 @@
 Changelog
 -----------
 
+0.0.8
+    - add the function of calling the `black` package
+    - determine the formatting method according to whether the 
+        command in the setting is an absolute path
 0.0.6
     - add the function of automatic formatting on save
 0.0.5:

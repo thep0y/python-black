@@ -4,24 +4,23 @@
 # @Email: thepoy@163.com
 # @File Name: utils.py
 # @Created: 2021-03-27 09:55:27
-# @Modified: 2021-06-06 08:25:46
+# @Modified: 2021-06-06 21:54:34
 
+import sublime
 import os
+import sys
+
 import subprocess
 import locale
-import sublime
 import difflib
 
 
 from io import StringIO
 from typing import Any, List, Optional
 from collections import namedtuple
-from .constants import (
-    STATUS_MESSAGE_TIMEOUT,
-    SETTINGS_FILE_NAME,
-    CODE,
-    CONFIG,
-)
+from .constants import STATUS_MESSAGE_TIMEOUT
+
+from .common import show_error_panel
 
 
 ViewState = namedtuple("ViewState", ["row", "col", "vector"])
@@ -29,10 +28,7 @@ ViewState = namedtuple("ViewState", ["row", "col", "vector"])
 
 def create_diff(source: str, formatted: str, filepath: str) -> str:
     result = difflib.unified_diff(
-        StringIO(source).readlines(),
-        StringIO(formatted).readlines(),
-        "original: %s" % filepath,
-        "fixed: %s" % filepath,
+        StringIO(source).readlines(), StringIO(formatted).readlines(), "original: %s" % filepath, "fixed: %s" % filepath
     )
     # fix issue with join two last lines
     lines = [item for item in result]
@@ -51,9 +47,12 @@ def system_env():
 
 
 def popen(cmd: List[Any]):
-    return subprocess.Popen(
-        cmd, env=system_env(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, bufsize=1
-    )
+    try:
+        return subprocess.Popen(
+            cmd, env=system_env(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, bufsize=1
+        )
+    except FileNotFoundError:
+        sublime.error_message("Unable to find the command, did you not install `black`?")
 
 
 def new_view(encoding: str, text: str):
@@ -62,22 +61,6 @@ def new_view(encoding: str, text: str):
     view.set_syntax_file("Packages/Diff/Diff.tmLanguage")
     view.run_command("black_output", {"text": text})
     view.set_scratch(True)
-
-
-def show_error_panel(text: str):
-    settings = sublime.load_settings(SETTINGS_FILE_NAME)
-    has_errors = False
-    if not (text and settings.get("show_output_panel", False)):
-        text = "python-black: There are no errors."
-    else:
-        text = "python-black: some issue(s) were not fixed:\n" + text
-        has_errors = True
-    view = sublime.active_window().get_output_panel("black")
-    view.set_read_only(False)
-    view.run_command("black_output", {"text": text})
-    view.set_read_only(True)
-    if has_errors:
-        sublime.active_window().run_command("show_panel", {"panel": "output.black"})
 
 
 def show_result(result):
@@ -95,7 +78,7 @@ def show_result(result):
     if has_changes:
         message = "python-black: Issues were fixed."
     sublime.status_message(message)
-    show_error_panel(not_fixed)
+    (not_fixed)
     # show diff.
     if diffs:
         new_view("utf-8", "\n".join(diffs))
@@ -168,18 +151,64 @@ def replace_text(edit: sublime.Edit, view: sublime.View, region: sublime.Region,
 
 
 def format_source_file(
-    edit: sublime.Edit,
-    formatted: str,
-    filepath: str,
-    view: sublime.View,
-    region: sublime.Region,
-    encoding: str,
+    edit: sublime.Edit, formatted: str, filepath: str, view: sublime.View, region: sublime.Region, encoding: str
 ):
     if view:
         replace_text(edit, view, region, formatted)
     else:
         with open(filepath, "w", encoding=encoding) as fd:
             fd.write(formatted)
+
+
+def get_site_packages_path(command: str) -> List[str]:
+    if sys.platform == "win32":
+        # TODO: return a site-packages list
+        # I am not using a windows system, and there is no
+        # guarantee that the following line of code is correct
+        return [os.path.join(command.split("Scripts")[0], "Lib", "site-packages")]
+    else:
+        lib_path = os.path.join(command.replace("bin/black", ""), "lib")
+        return [
+            os.path.join(lib_path, i, "site-packages") for i in os.listdir(lib_path) if i.lower().startswith("python")
+        ]
+
+
+def black_command_is_absolute_path(command: str) -> bool:
+    if not os.path.exists(command):
+        return False
+    return os.path.isabs(command)
+
+
+def format_by_popen(command: str, source: str, view: sublime.View):
+    from .constants import CODE, CONFIG
+
+    config_file = get_project_setting_file(view)
+
+    if config_file:
+        cmd_result = popen([command, CODE, source, CONFIG, config_file])
+    else:
+        cmd_result = popen([command, CODE, source])
+    out, err = cmd_result.communicate()
+    if out:
+        # Remove the last `\n`
+        out = out[:-1]
+        return out
+    show_error_panel("python-black:\n" + err)
+
+
+def format_by_import_black_package(command: str, source: str, filepath: str) -> Optional[str]:
+    sys.path.extend(get_site_packages_path(command))
+
+    from .black import really_format
+
+    formatted = really_format(source, src=(filepath,))
+    if not formatted:
+        # When formatting the selection, an error may be
+        # reported due to indentation issues, but this is
+        # a issue with `black` and I may fix it in the future.
+        show_error_panel("python-black:\nformatted fail")
+        return
+    return formatted
 
 
 def black_format(
@@ -190,25 +219,13 @@ def black_format(
     encoding: str,
     edit: sublime.Edit,
     view: sublime.View,
-    config_file: str = None,
-    preview: bool = False,
+    # preview: bool = False,
 ):
-    # black 格式化部分代码时因不能识别缩进，大概率会出错，出错时弹窗提醒
     sublime.status_message("black: formatting...")
-    if config_file:
-        cmd_result = popen([command, CODE, source, CONFIG, config_file])
+    if black_command_is_absolute_path(command):
+        formatted = format_by_import_black_package(command, source, filepath)
     else:
-        cmd_result = popen([command, CODE, source])
-    out, err = cmd_result.communicate()
-    if out:
-        # 这样输出的结果会多一个 \n，需要删除掉最后的 \n
-        out = out[:-1]
-        # 如果是预览
-        if preview:
-            formatted = create_diff(source, out, filepath)
-            if formatted and formatted != source:
-                pass
-        else:  # 不是预览的话直接格式化
-            format_source_file(edit, out, filepath, view, region, encoding)
-    else:
-        sublime.error_message("python-black:\n" + err)
+        formatted = format_by_popen(command, source, view)
+
+    if formatted:
+        format_source_file(edit, formatted, filepath, view, region, encoding)
