@@ -1,0 +1,25 @@
+{
+  "contributions": {
+    "settings": [
+      {
+        "file_patterns": [
+          "python-black.sublime-settings"
+        ],
+        "schema": {
+          "properties": {
+            "command": {
+              "type": "string",
+              "default": "black",
+              "markdownDescription": "Absolute path of the `black` command."
+            },
+            "format_on_save": {
+              "type": "boolean",
+              "default": true,
+              "markdownDescription": "Whether to **automatically format** the entire document when saving."
+            }
+          }
+        }
+      }
+    ]
+  }
+}

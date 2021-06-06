@@ -4,7 +4,7 @@
 # @Email: thepoy@163.com
 # @File Name: utils.py
 # @Created: 2021-03-27 09:55:27
-# @Modified: 2021-06-05 23:45:18
+# @Modified: 2021-06-06 08:25:46
 
 import os
 import subprocess
@@ -211,4 +211,4 @@ def black_format(
         else:  # 不是预览的话直接格式化
             format_source_file(edit, out, filepath, view, region, encoding)
     else:
-        sublime.error_message(err)
+        sublime.error_message("python-black:\n" + err)
