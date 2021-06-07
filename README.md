@@ -5,11 +5,7 @@ It is recommended to use with [LSP-pyright](https://github.com/sublimelsp/LSP-py
 
 ### Installation
 
-If you haven't install `black`, just install it:
-
-```shell
-pip install black
-```
+> There is **no need** to install `black`, but if you install it, it will not affect this package.
 
 You can install `python-black` with package control:
 
@@ -49,18 +45,8 @@ There are two modifiable properties in settings:
 
 ```js
 {
-   // If you fill in the absolute path, the file will be formatted using 
-   // the package import method, otherwise, the `black` command will be 
-   // called to format the file. 
-   // It is recommended to use absolute path in windows system.
-   // So you can also directly fill in the black command:
-   //         "command": "black"
-   // It's just not recommended.
-   // `$` and `~` are not supported, please fill in the full path correctly
-   "command": "/absolute/path/black",
-
    // Whether to automatically format the entire document when saving
-   "format_on_save": true,
+   "format_on_save": true
 }
 ```
 

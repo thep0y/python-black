@@ -1,6 +1,17 @@
+Python Black
+================
+
+Because `py38` cannot use dependencies, place the required dependencies in this package.
+Starting from version 1.0.0, no more configuration commands are required.
+
+
 Changelog
 -----------
 
+1.0.0
+    - No longer need to manually install the black library, 
+    you only need to care about whether to automatically 
+    format the document when saving
 0.0.8
     - add the function of calling the `black` package
     - determine the formatting method according to whether the 

@@ -4,21 +4,21 @@
 # @Email: thepoy@163.com
 # @File Name: utils.py
 # @Created: 2021-03-27 09:55:27
-# @Modified: 2021-06-06 21:54:34
+# @Modified: 2021-06-07 13:43:19
 
 import sublime
 import os
 import sys
-
 import subprocess
 import locale
 import difflib
+import platform
 
 
 from io import StringIO
 from typing import Any, List, Optional
 from collections import namedtuple
-from .constants import STATUS_MESSAGE_TIMEOUT
+from .constants import PACKAGE_NAME, STATUS_MESSAGE_TIMEOUT
 
 from .common import show_error_panel
 
@@ -196,9 +196,31 @@ def format_by_popen(command: str, source: str, view: sublime.View):
     show_error_panel("python-black:\n" + err)
 
 
-def format_by_import_black_package(command: str, source: str, filepath: str) -> Optional[str]:
-    sys.path.extend(get_site_packages_path(command))
+def get_system_info() -> str:
+    system_name = platform.system().lower()
+    # macOS 只用64位
+    if system_name == "darwin":
+        return f"{system_name}_x64"
+    architecture = platform.architecture()[0][:2]
+    return f"{system_name}_x{architecture}"
 
+
+def append_third_lib():
+    packages_path = sublime.packages_path()
+    python_black_path = os.path.join(packages_path, PACKAGE_NAME)
+    third_libs_path = os.path.join(python_black_path, "lib")
+
+    # 针对不同系统导入不同包
+    system_info = get_system_info()
+
+    if third_libs_path not in sys.path:
+        # 添加对应的系统库
+        sys.path.append(os.path.join(third_libs_path, system_info))
+        # 添加通用库，没有引用二进制库的纯 python 库放到通用库中
+        sys.path.append(os.path.join(third_libs_path, "common"))
+
+
+def format_by_import_black_package(source: str, filepath: str) -> Optional[str]:
     from .black import really_format
 
     formatted = really_format(source, src=(filepath,))
@@ -212,7 +234,6 @@ def format_by_import_black_package(command: str, source: str, filepath: str) -> 
 
 
 def black_format(
-    command: str,
     source: str,
     filepath: str,
     region: sublime.Region,
@@ -222,10 +243,8 @@ def black_format(
     # preview: bool = False,
 ):
     sublime.status_message("black: formatting...")
-    if black_command_is_absolute_path(command):
-        formatted = format_by_import_black_package(command, source, filepath)
-    else:
-        formatted = format_by_popen(command, source, view)
+
+    formatted = format_by_import_black_package(source, filepath)
 
     if formatted:
         format_source_file(edit, formatted, filepath, view, region, encoding)

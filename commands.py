@@ -4,7 +4,7 @@
 # @Email: thepoy@163.com
 # @File Name: commands.py
 # @Created: 2021-03-27 09:55:27
-# @Modified: 2021-06-06 21:55:14
+# @Modified: 2021-06-07 15:39:09
 
 import sublime
 import sublime_plugin
@@ -29,8 +29,6 @@ class BlackCommand(sublime_plugin.TextCommand):
         return region, self.view.substr(region), self.view.encoding()
 
     def run(self, edit: sublime.Edit):
-        settings = sublime.load_settings(SETTINGS_FILE_NAME)
-        command = settings.get("command")
         filename = self.view.file_name()
         if filename and not filename.endswith(".py"):
             sublime.status_message(f"black: The current file is not a python script file: {filename}")
@@ -43,9 +41,7 @@ class BlackCommand(sublime_plugin.TextCommand):
         if not isinstance(source, str) and hasattr(source, "decode"):
             source = source.decode(encoding)
         if filename:
-            black_format(
-                command, source=source, filepath=filename, region=region, encoding=encoding, edit=edit, view=self.view
-            )
+            black_format(source=source, filepath=filename, region=region, encoding=encoding, edit=edit, view=self.view)
 
 
 class BlackCreateConfiguration(sublime_plugin.WindowCommand):
@@ -100,3 +96,10 @@ class BlackOutputCommand(sublime_plugin.TextCommand):
 
     def is_visible(self, *args):
         return False
+
+
+def plugin_loaded():
+    from .python_black.utils import append_third_lib
+
+    append_third_lib()
+    sublime.status_message("python-black: Third-party dependencies loaded")

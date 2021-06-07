@@ -7,11 +7,6 @@
         ],
         "schema": {
           "properties": {
-            "command": {
-              "type": "string",
-              "default": "",
-              "markdownDescription": "Absolute path of the `black` command."
-            },
             "format_on_save": {
               "type": "boolean",
               "default": true,
