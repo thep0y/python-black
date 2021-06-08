@@ -4,7 +4,7 @@
 # @Email: thepoy@163.com
 # @File Name: commands.py
 # @Created: 2021-03-27 09:55:27
-# @Modified: 2021-06-07 19:59:41
+# @Modified: 2021-06-08 23:18:36
 
 import sublime
 import sublime_plugin
@@ -42,6 +42,14 @@ class BlackCommand(sublime_plugin.TextCommand):
             source = source.decode(encoding)
         if filename:
             black_format(source=source, filepath=filename, region=region, encoding=encoding, edit=edit, view=self.view)
+
+
+class BlackAllFilesCommand(sublime_plugin.TextCommand):
+    # TODO 格式化项目中所有 py 文件
+    # 应该传入文件路径，而不是文件内容
+    # 这里还用 TextCommand 吗？
+    def run(self, edit):
+        sublime.error_message("没写完")
 
 
 class BlackCreateConfiguration(sublime_plugin.WindowCommand):

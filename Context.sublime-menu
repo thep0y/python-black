@@ -1,0 +1,15 @@
+[
+    {
+        "caption": "Black",
+        "id": "python-black",
+        "children": [
+            {
+                "command": "black",
+                "caption": "Format File"
+            },            {
+                "command": "black_all_files",
+                "caption": "Format All Files"
+            }
+        ]
+    }
+]
