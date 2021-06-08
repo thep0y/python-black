@@ -41,7 +41,7 @@ You can create custom key binding based on sample`Preferences - Package Settings
 
 #### 2 Settings
 
-There are two modifiable properties in settings:
+There are only one modifiable property in settings:
 
 ```js
 {
@@ -59,6 +59,8 @@ You can quickly generate a black configuration file for the current project.
 | `python-black: Create Black Configuration File` | Creates a `pyproject.toml` file in the root of the project with basic options. Opens the configuration file if it already exists. |
 
 ### TODO
+
+- [ ] format all python files in the current project
 
 If someone likes or gives feedback, some features may be added in the future.
 
