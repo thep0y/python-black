@@ -2,7 +2,7 @@ Python Black
 ================
 
 Because `py38` cannot use dependencies, place the required dependencies in this package.
-Starting from version 1.0.0, no more configuration commands are required.
+Starting from version 1.0.0, no more configuration `black` command is required.
 
 
 Changelog
