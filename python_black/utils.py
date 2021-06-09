@@ -4,7 +4,7 @@
 # @Email: thepoy@163.com
 # @File Name: utils.py
 # @Created: 2021-03-27 09:55:27
-# @Modified: 2021-06-07 13:43:19
+# @Modified: 2021-06-09 21:29:49
 
 import sublime
 import os
@@ -213,11 +213,16 @@ def append_third_lib():
     # 针对不同系统导入不同包
     system_info = get_system_info()
 
-    if third_libs_path not in sys.path:
+    system_lib = os.path.join(third_libs_path, system_info)
+    common_lib = os.path.join(third_libs_path, "common")
+
+    if system_lib not in sys.path:
         # 添加对应的系统库
-        sys.path.append(os.path.join(third_libs_path, system_info))
+        sys.path.append(system_lib)
+
+    if common_lib not in sys.path:
         # 添加通用库，没有引用二进制库的纯 python 库放到通用库中
-        sys.path.append(os.path.join(third_libs_path, "common"))
+        sys.path.append(common_lib)
 
 
 def format_by_import_black_package(source: str, filepath: str) -> Optional[str]:
