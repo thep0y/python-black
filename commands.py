@@ -4,7 +4,7 @@
 # @Email: thepoy@163.com
 # @File Name: commands.py
 # @Created: 2021-03-27 09:55:27
-# @Modified: 2021-06-09 21:35:34
+# @Modified: 2021-06-11 23:37:37
 
 import sublime
 import sublime_plugin
@@ -107,7 +107,9 @@ class BlackOutputCommand(sublime_plugin.TextCommand):
 
 
 def plugin_loaded():
-    from .python_black.common import append_third_lib
+    from .python_black.common import get_package_path, extract, append_third_lib
 
-    append_third_lib()
+    package_path = get_package_path()
+    extract(package_path)
+    append_third_lib(package_path)
     sublime.status_message("python-black: Third-party dependencies loaded")

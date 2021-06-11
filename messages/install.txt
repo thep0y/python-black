@@ -8,6 +8,8 @@ Starting from version 1.0.0, no more configuration `black` command is required.
 Changelog
 -----------
 
+1.0.2
+    - Solve the issue that the lib library cannot be imported correctly by decompressing the sublime-package
 1.0.0
     - No longer need to manually install the black library, 
     you only need to care about whether to automatically 

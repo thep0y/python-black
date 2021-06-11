@@ -41,7 +41,7 @@ You can create custom key binding based on sample`Preferences - Package Settings
 
 #### 2 Settings
 
-There are only one modifiable property in settings:
+There is only one modifiable property in settings:
 
 ```js
 {

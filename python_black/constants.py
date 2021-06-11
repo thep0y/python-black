@@ -4,9 +4,10 @@
 # @Email: thepoy@163.com
 # @File Name: constants.py
 # @Created: 2021-03-27 09:55:27
-# @Modified: 2021-06-07 13:39:49
+# @Modified: 2021-06-11 23:45:03
 
 PACKAGE_NAME = "python-black"
+INSTALLED_PACKAGE_NAME = f"{PACKAGE_NAME}.sublime-package"
 SETTINGS_FILE_NAME = "%s.sublime-settings" % PACKAGE_NAME
 
 WORKER_TIMEOUT = 0

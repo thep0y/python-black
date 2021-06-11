@@ -4,12 +4,14 @@
 # @Email: thepoy@163.com
 # @File Name: common.py
 # @Created: 2021-03-27 09:55:27
-# @Modified: 2021-06-09 21:36:04
+# @Modified: 2021-06-11 23:45:55
 
 import sublime
 import os
 import sys
 import platform
+import zipfile
+import shutil
 
 from .constants import PACKAGE_NAME
 
@@ -31,10 +33,14 @@ def get_system_info() -> str:
     return f"{system_name}_x{architecture}"
 
 
-def append_third_lib():
-    """添加项目中的依赖到系统环境中"""
+def get_package_path() -> str:
     packages_path = sublime.packages_path()
     python_black_path = os.path.join(packages_path, PACKAGE_NAME)
+    return python_black_path
+
+
+def append_third_lib(python_black_path: str):
+    """添加项目中的依赖到系统环境中"""
     third_libs_path = os.path.join(python_black_path, "lib")
 
     # 针对不同系统导入不同包
@@ -50,3 +56,22 @@ def append_third_lib():
     if common_lib not in sys.path:
         # 添加通用库，没有引用二进制库的纯 python 库放到通用库中
         sys.path.append(common_lib)
+
+
+def extract(python_black_path: str):
+    # 检查当前是在 subime-package 包中执行的还是在 packags 目录中执行的
+    current_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+    if current_path != python_black_path:
+        if os.path.exists(python_black_path):
+            try:
+                shutil.rmtree(python_black_path)
+            except:
+                pass
+
+        if not os.path.exists(python_black_path):
+            os.mkdir(python_black_path)
+
+        z = zipfile.ZipFile(current_path, "r")
+        for f in z.namelist():
+            z.extract(f, python_black_path)
+        z.close()
