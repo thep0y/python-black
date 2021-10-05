@@ -7,6 +7,8 @@ Starting from version 1.0.0, no more configuration `black` command is required.
 
 Changelog
 -----------
+1.0.4
+    - updated: https://github.com/thep0y/python-black/issues/4
 1.0.3
     - Compare versions when loading plugins to reduce disk io
 1.0.2
