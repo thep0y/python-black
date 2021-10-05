@@ -33,8 +33,8 @@ def find_global_config_file() -> Optional[str]:
 
 
 def read_pyproject_toml(
-    config_file: Optional[str], default_config: Optional[Dict[str, Any]], src: Tuple[str, ...]
-) -> Tuple[Optional[dict], Optional[str]]:
+    config_file: Optional[str], default_config: Dict[str, Any], src: Tuple[str, ...]
+) -> Tuple[Dict[str, Any], Optional[str]]:
     """Inject Black configuration from "pyproject.toml" into defaults config.
 
     Returns the configuration dict and config file path to
@@ -102,6 +102,9 @@ def really_format(code: str, src: Tuple[str, ...], config_file: Optional[str] = 
     }
 
     default_config, config_file = read_pyproject_toml(config_file, default_config, src)
+    if not default_config:
+        return None
+
     if config_file:
         out(f"Using configuration from {config_file}.")
     else:

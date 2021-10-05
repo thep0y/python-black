@@ -4,7 +4,7 @@
 # @Email: thepoy@163.com
 # @File Name: utils.py
 # @Created: 2021-03-27 09:55:27
-# @Modified: 2021-06-09 21:35:15
+# @Modified: 2021-10-05 22:29:12
 
 import sublime
 import os
@@ -18,8 +18,6 @@ from io import StringIO
 from typing import Any, List, Optional
 from collections import namedtuple
 from .constants import STATUS_MESSAGE_TIMEOUT
-
-from .common import show_error_panel
 
 
 ViewState = namedtuple("ViewState", ["row", "col", "vector"])
@@ -86,7 +84,7 @@ def show_result(result):
 
 def find_current_file_path(view: sublime.View, filename: str) -> Optional[str]:
     window = view.window()
-    filepath = window.extract_variables().get("file_path", None)
+    filepath = window.extract_variables().get("file_path", None)  # type: ignore
     if not filepath:
         return None
     return os.path.join(filepath, filename)
@@ -95,7 +93,7 @@ def find_current_file_path(view: sublime.View, filename: str) -> Optional[str]:
 def find_root_path_of_current_file(view: sublime.View, filename: str) -> Optional[str]:
     window = view.window()
     # root path of current window
-    folders = window.folders()
+    folders = window.folders()  # type: ignore
     if len(folders) > 0:
         return os.path.join(folders[0], filename)
     return None
@@ -161,9 +159,6 @@ def format_source_file(
 
 def get_site_packages_path(command: str) -> List[str]:
     if sys.platform == "win32":
-        # TODO: return a site-packages list
-        # I am not using a windows system, and there is no
-        # guarantee that the following line of code is correct
         return [os.path.join(command.split("Scripts")[0], "Lib", "site-packages")]
     else:
         lib_path = os.path.join(command.replace("bin/black", ""), "lib")
@@ -178,23 +173,6 @@ def black_command_is_absolute_path(command: str) -> bool:
     return os.path.isabs(command)
 
 
-def format_by_popen(command: str, source: str, view: sublime.View):
-    from .constants import CODE, CONFIG
-
-    config_file = get_project_setting_file(view)
-
-    if config_file:
-        cmd_result = popen([command, CODE, source, CONFIG, config_file])
-    else:
-        cmd_result = popen([command, CODE, source])
-    out, err = cmd_result.communicate()
-    if out:
-        # Remove the last `\n`
-        out = out[:-1]
-        return out
-    show_error_panel("python-black:\n" + err)
-
-
 def format_by_import_black_package(source: str, filepath: str) -> Optional[str]:
     from .black import really_format
 
@@ -203,7 +181,7 @@ def format_by_import_black_package(source: str, filepath: str) -> Optional[str]:
         # When formatting the selection, an error may be
         # reported due to indentation issues, but this is
         # a issue with `black` and I may fix it in the future.
-        show_error_panel("python-black:\nformatted fail")
+        sublime.status_message("python-black: format failed")
         return
     return formatted
 
