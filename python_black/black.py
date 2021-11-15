@@ -115,8 +115,6 @@ def really_format(code: str, src: Tuple[str, ...], config_file: Optional[str] = 
         if target_version:
             versions = set(target_version)
 
-    print("config is:", default_config)
-
     mode = Mode(
         target_versions=versions,
         line_length=int(default_config["line_length"]),
