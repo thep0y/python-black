@@ -65,8 +65,8 @@ def md5(filename: str) -> Optional[str]:
         return None
 
     try:
-        f = open(filename, 'rb')
-    except:
+        f = open(filename, "rb")
+    except Exception:
         return None
 
     m = hashlib.md5()
@@ -81,39 +81,41 @@ def md5(filename: str) -> Optional[str]:
     return ret
 
 
-def extract(python_black_path: str):
-    # 检查当前是在 subime-package 包中执行的还是在 packags 目录中执行的
+def extract(python_black_path: str) -> None:
+    # 检查当前是在 sublime-package 包中执行的还是在 packages 目录中执行的
     current_path = os.path.abspath(os.path.dirname(__file__))
     installed_pkg_path = os.path.join(sublime.installed_packages_path(), INSTALLED_PACKAGE_NAME)
-    md5_file = os.path.join(python_black_path, "md5")
+
+    if not os.path.exists(installed_pkg_path):
+        return
 
     if current_path != installed_pkg_path:
         installed_pkg_md5 = md5(installed_pkg_path)
-        if not installed_pkg_md5:
+        md5_file = os.path.join(python_black_path, "md5")
+
+        if not installed_pkg_md5 or not md5_file:
             raise Exception("Invalid md5")
 
-        if os.path.exists(md5_file):
-            with open(md5_file, "r") as f:
-                saved_md5 = f.read()
-                if installed_pkg_md5 == saved_md5:
-                    # 如果之前保存的 md5 和现在的 md5 一样，说明没有更新，不需要执行下面的代码
-                    # 只有在新安装或更新时才需要执行下面的代码
-                    # 减少磁盘 IO
-                    return
+        with open(md5_file, "r") as f:
+            saved_md5 = f.read()
+            if installed_pkg_md5 == saved_md5:
+                # 如果之前保存的 md5 和现在的 md5 一样，说明没有更新，不需要执行下面的代码
+                # 只有在新安装或更新时才需要执行下面的代码
+                # 减少磁盘 IO
+                return
 
         if os.path.exists(python_black_path):
             try:
                 shutil.rmtree(python_black_path)
-            except:
+            except Exception:
                 pass
 
         if not os.path.exists(python_black_path):
             os.mkdir(python_black_path)
 
-        z = zipfile.ZipFile(installed_pkg_path, "r")
-        for f in z.namelist():
-            z.extract(f, python_black_path)
-        z.close()
+        with zipfile.ZipFile(installed_pkg_path, "r") as z:
+            for f in z.namelist():
+                z.extract(f, python_black_path)
 
         # 将安装或更新的 sublime-package 的 md5 保存到 packages 中
         with open(md5_file, "w") as f:

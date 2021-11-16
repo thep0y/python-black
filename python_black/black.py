@@ -63,8 +63,6 @@ def read_pyproject_toml(
 
     if not config:
         return default_config, None
-    else:
-        config = {k: str(v) if not isinstance(v, (list, dict)) else v for k, v in config.items()}
 
     target_version = config.get("target_version")
     if target_version is not None and not isinstance(target_version, list):
@@ -93,11 +91,11 @@ def really_format(code: str, src: Tuple[str, ...], config_file: Optional[str] = 
     Returns:
         Optional[str]: Formatted code
     """
-    default_config = {
+    default_config: Dict[str, Any] = {
         "line_length": DEFAULT_LINE_LENGTH,
-        "skip_string_normalization": True,
-        "skip_magic_trailing_comma": True,
-        "experimental_string_processing": True,
+        "skip_string_normalization": False,
+        "skip_magic_trailing_comma": False,
+        "experimental_string_processing": False,
         "include": DEFAULT_INCLUDES,
     }
 
@@ -119,11 +117,11 @@ def really_format(code: str, src: Tuple[str, ...], config_file: Optional[str] = 
 
     mode = Mode(
         target_versions=versions,
-        line_length=int(default_config['line_length']),
+        line_length=int(default_config["line_length"]),
         is_pyi=False,
-        string_normalization=not default_config['skip_string_normalization'],
-        magic_trailing_comma=not default_config['skip_magic_trailing_comma'],
-        experimental_string_processing=default_config['experimental_string_processing'],
+        string_normalization=not default_config["skip_string_normalization"],
+        magic_trailing_comma=not default_config["skip_magic_trailing_comma"],
+        experimental_string_processing=default_config["experimental_string_processing"],
     )
 
     if code is not None:
