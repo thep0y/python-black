@@ -4,7 +4,7 @@
 # @Email: thepoy@163.com
 # @File Name: common.py
 # @Created: 2021-03-27 09:55:27
-# @Modified: 2021-10-05 22:29:29
+# @Modified:  2021-11-22 10:39:40
 
 from typing import Optional
 import sublime
@@ -96,13 +96,14 @@ def extract(python_black_path: str) -> None:
         if not installed_pkg_md5 or not md5_file:
             raise Exception("Invalid md5")
 
-        with open(md5_file, "r") as f:
-            saved_md5 = f.read()
-            if installed_pkg_md5 == saved_md5:
-                # 如果之前保存的 md5 和现在的 md5 一样，说明没有更新，不需要执行下面的代码
-                # 只有在新安装或更新时才需要执行下面的代码
-                # 减少磁盘 IO
-                return
+        if os.path.exists(md5_file):
+            with open(md5_file, "r") as f:
+                saved_md5 = f.read()
+                if installed_pkg_md5 == saved_md5:
+                    # 如果之前保存的 md5 和现在的 md5 一样，说明没有更新，不需要执行下面的代码
+                    # 只有在新安装或更新时才需要执行下面的代码
+                    # 减少磁盘 IO
+                    return
 
         if os.path.exists(python_black_path):
             try:
