@@ -1,37 +1,11 @@
-Python Black
-================
-
-Because `py38` cannot use dependencies, place the required dependencies in this package.
-Starting from version 1.0.0, no more configuration `black` command is required.
+            Thanks for trying out the python-black package!
+            ===============================================
 
 
-Changelog
------------
-1.0.4
-    - updated: https://github.com/thep0y/python-black/issues/4
-1.0.3
-    - Compare versions when loading plugins to reduce disk io
-1.0.2
-    - Solve the issue that the lib library cannot be imported correctly by decompressing the sublime-package
-1.0.0
-    - No longer need to manually install the black library, 
-    you only need to care about whether to automatically 
-    format the document when saving
-0.0.8
-    - add the function of calling the `black` package
-    - determine the formatting method according to whether the 
-        command in the setting is an absolute path
-0.0.6
-    - add the function of automatic formatting on save
-0.0.5:
-    - add a command to create a black configuration file
-    - modify the project structure
-    - add formatted status messages to the status bar
-0.0.4:
-    - add `.python-version` file use python 3.8
-0.0.3:
-    - format code with buffer
-0.0.2:
-    - delete default key-map
-0.0.1:
-    - init
+`python-black` is an unofficial `black` plugin developed for Sublime Text 4.
+
+The current version can format the currently active `.py` file before saving.
+
+The configuration file used is the same as the official `black`.
+
+**Sublime Text needs to be restarted after installing `python-black`!**
