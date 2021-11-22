@@ -50,13 +50,17 @@ There is only one modifiable property in settings:
 }
 ```
 
-#### 3 Create Black Configuration File
+#### 3 Create Black Configuration File In The Project
 
 You can quickly generate a black configuration file for the current project.
 
 | Command                                         | Description                                                  |
 | ----------------------------------------------- | ------------------------------------------------------------ |
 | `python-black: Create Black Configuration File` | Creates a `pyproject.toml` file in the root of the project with basic options. Opens the configuration file if it already exists. |
+
+#### 4 Global Black Configuration File
+
+Refer to [Black Documentation](https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html#where-black-looks-for-the-file).
 
 ### TODO
 
