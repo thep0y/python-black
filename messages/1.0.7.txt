@@ -1,0 +1,5 @@
+=> 1.0.7
+
+# Features and Fixes
+
+- update `black` version to `21.11b1`

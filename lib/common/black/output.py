@@ -18,6 +18,14 @@ def err(msg: str):
     sublime.status_message(f"black error: {msg}")
 
 
+def show_error_panel(text: str):
+    view = sublime.active_window().get_output_panel("black")
+    view.set_read_only(False)
+    view.run_command("black_output", {"text": text})
+    view.set_read_only(True)
+    sublime.active_window().run_command("show_panel", {"panel": "output.black"})
+
+
 def diff(a: str, b: str, a_name: str, b_name: str) -> str:
     """Return a unified diff string between strings `a` and `b`."""
     import difflib

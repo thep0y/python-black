@@ -11,6 +11,7 @@ from black.comments import normalize_fmt_off
 from black.mode import Mode, TargetVersion
 from black.mode import Feature, supports_feature, VERSION_TO_FEATURES
 from black.parsing import lib2to3_parse
+from black.output import show_error_panel
 
 
 # lib2to3 fork
@@ -62,6 +63,12 @@ def format_str(src_contents: str, *, mode: Mode) -> FileContent:
         versions = mode.target_versions
     else:
         versions = detect_target_versions(src_node)
+
+    # TODO: fully drop support and this code hopefully in January 2022 :D
+    if TargetVersion.PY27 in mode.target_versions or versions == {TargetVersion.PY27}:
+        msg = "DEPRECATION: Python 2 support will be removed in the first stable release " "expected in January 2022."
+        show_error_panel(msg)
+
     normalize_fmt_off(src_node)
     lines = LineGenerator(
         mode=mode,
@@ -122,9 +129,21 @@ def get_features_used(node: Node) -> Set[Feature]:
         elif n.type == token.NUMBER:
             if "_" in n.value:  # type: ignore
                 features.add(Feature.NUMERIC_UNDERSCORES)
+            elif n.value.endswith(("L", "l")):  # type: ignore
+                # Python 2: 10L
+                features.add(Feature.LONG_INT_LITERAL)
+            elif len(n.value) >= 2 and n.value[0] == "0" and n.value[1].isdigit():  # type: ignore
+                # Python 2: 0123; 00123; ...
+                if not all(char == "0" for char in n.value):  # type: ignore
+                    # although we don't want to match 0000 or similar
+                    features.add(Feature.OCTAL_INT_LITERAL)
 
         elif n.type == token.SLASH:
-            if n.parent and n.parent.type in {syms.typedargslist, syms.arglist}:
+            if n.parent and n.parent.type in {
+                syms.typedargslist,
+                syms.arglist,
+                syms.varargslist,
+            }:
                 features.add(Feature.POS_ONLY_ARGUMENTS)
 
         elif n.type == token.COLONEQUAL:
@@ -148,6 +167,32 @@ def get_features_used(node: Node) -> Set[Feature]:
                     for argch in ch.children:
                         if argch.type in STARS:
                             features.add(feature)
+
+        # Python 2 only features (for its deprecation) except for integers, see above
+        elif n.type == syms.print_stmt:
+            features.add(Feature.PRINT_STMT)
+        elif n.type == syms.exec_stmt:
+            features.add(Feature.EXEC_STMT)
+        elif n.type == syms.tfpdef:
+            # def set_position((x, y), value):
+            #     ...
+            features.add(Feature.AUTOMATIC_PARAMETER_UNPACKING)
+        elif n.type == syms.except_clause:
+            # try:
+            #     ...
+            # except Exception, err:
+            #     ...
+            if len(n.children) >= 4:
+                if n.children[-2].type == token.COMMA:
+                    features.add(Feature.COMMA_STYLE_EXCEPT)
+        elif n.type == syms.raise_stmt:
+            # raise Exception, "msg"
+            if len(n.children) >= 4:
+                if n.children[-2].type == token.COMMA:
+                    features.add(Feature.COMMA_STYLE_RAISE)
+        elif n.type == token.BACKQUOTE:
+            # `i'm surprised this ever existed`
+            features.add(Feature.BACKQUOTE_REPR)
 
     return features
 
@@ -215,27 +260,3 @@ def nullcontext() -> Iterator[None]:
     To be used like `nullcontext` in Python 3.7.
     """
     yield
-
-
-def patch_click() -> None:
-    """Make Click not crash on Python 3.6 with LANG=C.
-
-    On certain misconfigured environments, Python 3 selects the ASCII encoding as the
-    default which restricts paths that it can access during the lifetime of the
-    application.  Click refuses to work in this scenario by raising a RuntimeError.
-
-    In case of Black the likelihood that non-ASCII characters are going to be used in
-    file paths is minimal since it's Python source code.  Moreover, this crash was
-    spurious on Python 3.7 thanks to PEP 538 and PEP 540.
-    """
-    try:
-        from click import core
-        from click import _unicodefun  # type: ignore
-    except ModuleNotFoundError:
-        return
-
-    for module in (core, _unicodefun):
-        if hasattr(module, "_verify_python3_env"):
-            module._verify_python3_env = lambda: None  # type: ignore
-        if hasattr(module, "_verify_python_env"):
-            module._verify_python_env = lambda: None  # type: ignore

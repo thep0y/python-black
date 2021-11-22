@@ -124,6 +124,6 @@ def really_format(code: str, src: Tuple[str, ...], config_file: Optional[str] = 
         experimental_string_processing=default_config["experimental_string_processing"],
     )
 
-    if code is not None:
+    if code:
         formatted = format_str(code, mode=mode)
         return formatted

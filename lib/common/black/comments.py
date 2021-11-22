@@ -1,7 +1,13 @@
+import sys
 from dataclasses import dataclass
 from functools import lru_cache
 import regex as re
 from typing import Iterator, List, Optional, Union
+
+if sys.version_info >= (3, 8):
+    from typing import Final
+else:
+    from typing_extensions import Final
 
 from blib2to3.pytree import Node, Leaf
 from blib2to3.pgen2 import token
@@ -12,11 +18,10 @@ from black.nodes import STANDALONE_COMMENT, WHITESPACE
 # types
 LN = Union[Leaf, Node]
 
-
-FMT_OFF = {"# fmt: off", "# fmt:off", "# yapf: disable"}
-FMT_SKIP = {"# fmt: skip", "# fmt:skip"}
-FMT_PASS = {*FMT_OFF, *FMT_SKIP}
-FMT_ON = {"# fmt: on", "# fmt:on", "# yapf: enable"}
+FMT_OFF: Final = {"# fmt: off", "# fmt:off", "# yapf: disable"}
+FMT_SKIP: Final = {"# fmt: skip", "# fmt:skip"}
+FMT_PASS: Final = {*FMT_OFF, *FMT_SKIP}
+FMT_ON: Final = {"# fmt: on", "# fmt:on", "# yapf: enable"}
 
 
 @dataclass
@@ -88,11 +93,7 @@ def list_comments(prefix: str, *, is_endmarker: bool) -> List[ProtoComment]:
         else:
             comment_type = STANDALONE_COMMENT
         comment = make_comment(line)
-        result.append(
-            ProtoComment(
-                type=comment_type, value=comment, newlines=nlines, consumed=consumed
-            )
-        )
+        result.append(ProtoComment(type=comment_type, value=comment, newlines=nlines, consumed=consumed))
         nlines = 0
     return result
 
@@ -111,12 +112,8 @@ def make_comment(content: str) -> str:
 
     if content[0] == "#":
         content = content[1:]
-    NON_BREAKING_SPACE = " "
-    if (
-        content
-        and content[0] == NON_BREAKING_SPACE
-        and not content.lstrip().startswith("type:")
-    ):
+    NON_BREAKING_SPACE = " "
+    if content and content[0] == NON_BREAKING_SPACE and not content.lstrip().startswith("type:"):
         content = " " + content[1:]  # Replace NBSP by a simple space
     if content and content[0] not in " !:#'%":
         content = " " + content
@@ -159,7 +156,10 @@ def convert_one_fmt_off_pair(node: Node) -> bool:
             first = ignored_nodes[0]  # Can be a container node with the `leaf`.
             parent = first.parent
             prefix = first.prefix
-            first.prefix = prefix[comment.consumed :]
+            if comment.value in FMT_OFF:
+                first.prefix = prefix[comment.consumed :]
+            if comment.value in FMT_SKIP:
+                first.prefix = ""
             hidden_value = "".join(str(n) for n in ignored_nodes)
             if comment.value in FMT_OFF:
                 hidden_value = comment.value + "\n" + hidden_value
@@ -201,10 +201,7 @@ def generate_ignored_nodes(leaf: Leaf, comment: ProtoComment) -> Iterator[LN]:
         if comment.value in leaf.prefix and prev_sibling is not None:
             leaf.prefix = leaf.prefix.replace(comment.value, "")
             siblings = [prev_sibling]
-            while (
-                "\n" not in prev_sibling.prefix
-                and prev_sibling.prev_sibling is not None
-            ):
+            while "\n" not in prev_sibling.prefix and prev_sibling.prev_sibling is not None:
                 prev_sibling = prev_sibling.prev_sibling
                 siblings.insert(0, prev_sibling)
             for sibling in siblings:

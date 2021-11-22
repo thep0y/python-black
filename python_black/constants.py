@@ -4,7 +4,7 @@
 # @Email: thepoy@163.com
 # @File Name: constants.py
 # @Created: 2021-03-27 09:55:27
-# @Modified: 2021-06-11 23:45:03
+# @Modified:  2021-11-22 13:16:14
 
 PACKAGE_NAME = "python-black"
 INSTALLED_PACKAGE_NAME = f"{PACKAGE_NAME}.sublime-package"
@@ -24,7 +24,7 @@ STATUS_MESSAGE_TIMEOUT = 3000
 
 CONFIGURATION_FILENAME = "pyproject.toml"
 CONFIGURATION_CONTENTS = """[tool.black]
-line-length = 120
+line-length = 88
 target-version = ['py38']
 include = '\\.pyi?\\$'
 extend-exclude = '''

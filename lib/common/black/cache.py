@@ -6,7 +6,7 @@ from pathlib import Path
 import tempfile
 from typing import Dict, Iterable, Set, Tuple
 
-from appdirs import user_cache_dir
+from platformdirs import user_cache_dir
 
 from black.mode import Mode
 
@@ -35,7 +35,7 @@ def read_cache(mode: Mode) -> Cache:
     with cache_file.open("rb") as fobj:
         try:
             cache: Cache = pickle.load(fobj)
-        except (pickle.UnpicklingError, ValueError):
+        except (pickle.UnpicklingError, ValueError, IndexError):
             return {}
 
     return cache

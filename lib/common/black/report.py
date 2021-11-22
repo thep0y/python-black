@@ -14,6 +14,10 @@ class Changed(Enum):
     YES = 2
 
 
+class NothingChanged(UserWarning):
+    """Raised when reformatted code is the same as source."""
+
+
 @dataclass
 class Report:
     """Provides a reformatting counter. Can be rendered with `str(report)`."""
@@ -39,7 +43,7 @@ class Report:
                     msg = f"{src} already well formatted, good job."
                 else:
                     msg = f"{src} wasn't modified on disk since last run."
-                out(msg, bold=False)
+                out(msg)
             self.same_count += 1
 
     def failed(self, src: Path, message: str) -> None:
@@ -49,7 +53,7 @@ class Report:
 
     def path_ignored(self, path: Path, message: str) -> None:
         if self.verbose:
-            out(f"{path} ignored: {message}", bold=False)
+            out(f"{path} ignored: {message}")
 
     @property
     def return_code(self) -> int:

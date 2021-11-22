@@ -15,10 +15,12 @@ from typing import (
     Union,
 )
 
-if sys.version_info < (3, 8):
-    from typing_extensions import Final
-else:
+if sys.version_info >= (3, 8):
     from typing import Final
+else:
+    from typing_extensions import Final
+
+from mypy_extensions import mypyc_attr
 
 # lib2to3 fork
 from blib2to3.pytree import Node, Leaf, type_repr
@@ -30,7 +32,7 @@ from black.strings import has_triple_quotes
 
 
 pygram.initialize(CACHE_DIR)
-syms = pygram.python_symbols
+syms: Final = pygram.python_symbols
 
 
 # types
@@ -128,14 +130,21 @@ ASSIGNMENTS: Final = {
     "//=",
 }
 
-IMPLICIT_TUPLE = {syms.testlist, syms.testlist_star_expr, syms.exprlist}
-BRACKET = {token.LPAR: token.RPAR, token.LSQB: token.RSQB, token.LBRACE: token.RBRACE}
-OPENING_BRACKETS = set(BRACKET.keys())
-CLOSING_BRACKETS = set(BRACKET.values())
-BRACKETS = OPENING_BRACKETS | CLOSING_BRACKETS
-ALWAYS_NO_SPACE = CLOSING_BRACKETS | {token.COMMA, STANDALONE_COMMENT}
+IMPLICIT_TUPLE: Final = {syms.testlist, syms.testlist_star_expr, syms.exprlist}
+BRACKET: Final = {
+    token.LPAR: token.RPAR,
+    token.LSQB: token.RSQB,
+    token.LBRACE: token.RBRACE,
+}
+OPENING_BRACKETS: Final = set(BRACKET.keys())
+CLOSING_BRACKETS: Final = set(BRACKET.values())
+BRACKETS: Final = OPENING_BRACKETS | CLOSING_BRACKETS
+ALWAYS_NO_SPACE: Final = CLOSING_BRACKETS | {token.COMMA, STANDALONE_COMMENT}
+
+RARROW = 55
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class Visitor(Generic[T]):
     """Basic lib2to3 visitor that yields things of type `T` on `visit()`."""
 
@@ -176,9 +185,9 @@ def whitespace(leaf: Leaf, *, complex_subscript: bool) -> str:  # noqa: C901
     `complex_subscript` signals whether the given leaf is part of a subscription
     which has non-trivial arguments, like arithmetic expressions or function calls.
     """
-    NO = ""
-    SPACE = " "
-    DOUBLESPACE = "  "
+    NO: Final = ""
+    SPACE: Final = " "
+    DOUBLESPACE: Final = "  "
     t = leaf.type
     p = leaf.parent
     v = leaf.value
@@ -235,11 +244,7 @@ def whitespace(leaf: Leaf, *, complex_subscript: bool) -> str:  # noqa: C901
             if prevp.parent and prevp.parent.type in {syms.subscript, syms.sliceop}:
                 return SPACE if complex_subscript else NO
 
-        elif (
-            prevp.parent
-            and prevp.parent.type == syms.factor
-            and prevp.type in MATH_OPERATORS
-        ):
+        elif prevp.parent and prevp.parent.type == syms.factor and prevp.type in MATH_OPERATORS:
             return NO
 
         elif (
@@ -439,8 +444,8 @@ def prev_siblings_are(node: Optional[LN], tokens: List[Optional[NodeType]]) -> b
 
 def last_two_except(leaves: List[Leaf], omit: Collection[LeafID]) -> Tuple[Leaf, Leaf]:
     """Return (penultimate, last) leaves skipping brackets in `omit` and contents."""
-    stop_after = None
-    last = None
+    stop_after: Optional[Leaf] = None
+    last: Optional[Leaf] = None
     for leaf in reversed(leaves):
         if stop_after:
             if leaf is stop_after:
@@ -541,9 +546,7 @@ def first_child_is_arith(node: Node) -> bool:
 
 
 def is_docstring(leaf: Leaf) -> bool:
-    if prev_siblings_are(
-        leaf.parent, [None, token.NEWLINE, token.INDENT, syms.simple_stmt]
-    ):
+    if prev_siblings_are(leaf.parent, [None, token.NEWLINE, token.INDENT, syms.simple_stmt]):
         return True
 
     # Multiline docstring on the same line as the `def`.
@@ -574,11 +577,7 @@ def is_one_tuple(node: LN) -> bool:
 
         return len(gexp.children) == 2 and gexp.children[1].type == token.COMMA
 
-    return (
-        node.type in IMPLICIT_TUPLE
-        and len(node.children) == 2
-        and node.children[1].type == token.COMMA
-    )
+    return node.type in IMPLICIT_TUPLE and len(node.children) == 2 and node.children[1].type == token.COMMA
 
 
 def is_one_tuple_between(opening: Leaf, closing: Leaf, leaves: List[Leaf]) -> bool:
@@ -622,11 +621,7 @@ def is_walrus_assignment(node: LN) -> bool:
 def is_simple_decorator_trailer(node: LN, last: bool = False) -> bool:
     """Return True iff `node` is a trailer valid in a simple decorator"""
     return node.type == syms.trailer and (
-        (
-            len(node.children) == 2
-            and node.children[0].type == token.DOT
-            and node.children[1].type == token.NAME
-        )
+        (len(node.children) == 2 and node.children[0].type == token.DOT and node.children[1].type == token.NAME)
         # last trailer can be an argument-less parentheses pair
         or (
             last
@@ -661,10 +656,7 @@ def is_simple_decorator_expression(node: LN) -> bool:
             return (
                 node.children[0].type == token.NAME
                 and all(map(is_simple_decorator_trailer, node.children[1:-1]))
-                and (
-                    len(node.children) < 2
-                    or is_simple_decorator_trailer(node.children[-1], last=True)
-                )
+                and (len(node.children) < 2 or is_simple_decorator_trailer(node.children[-1], last=True))
             )
     return False
 
@@ -784,10 +776,7 @@ def is_import(leaf: Leaf) -> bool:
     v = leaf.value
     return bool(
         t == token.NAME
-        and (
-            (v == "import" and p and p.type == syms.import_name)
-            or (v == "from" and p and p.type == syms.import_from)
-        )
+        and ((v == "import" and p and p.type == syms.import_name) or (v == "from" and p and p.type == syms.import_from))
     )
 
 

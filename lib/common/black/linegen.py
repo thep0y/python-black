@@ -5,9 +5,7 @@ from functools import partial, wraps
 import sys
 from typing import Collection, Iterator, List, Optional, Set, Union
 
-from dataclasses import dataclass, field
-
-from black.nodes import WHITESPACE, STATEMENT, STANDALONE_COMMENT
+from black.nodes import WHITESPACE, RARROW, STATEMENT, STANDALONE_COMMENT
 from black.nodes import ASSIGNMENTS, OPENING_BRACKETS, CLOSING_BRACKETS
 from black.nodes import Visitor, syms, first_child_is_arith, ensure_visible
 from black.nodes import is_docstring, is_empty_tuple, is_one_tuple, is_one_tuple_between
@@ -40,7 +38,8 @@ class CannotSplit(CannotTransform):
     """A readable split that fits the allotted line length is impossible."""
 
 
-@dataclass
+# This isn't a dataclass because @dataclass + Generic breaks mypyc.
+# See also https://github.com/mypyc/mypyc/issues/827.
 class LineGenerator(Visitor[Line]):
     """Generates reformatted Line objects.  Empty lines are not emitted.
 
@@ -48,9 +47,11 @@ class LineGenerator(Visitor[Line]):
     in ways that will no longer stringify to valid Python code on the tree.
     """
 
-    mode: Mode
-    remove_u_prefix: bool = False
-    current_line: Line = field(init=False)
+    def __init__(self, mode: Mode, remove_u_prefix: bool = False) -> None:
+        self.mode = mode
+        self.remove_u_prefix = remove_u_prefix
+        self.current_line: Line
+        self.__post_init__()
 
     def line(self, indent: int = 0) -> Iterator[Line]:
         """Generate a line.
@@ -90,9 +91,7 @@ class LineGenerator(Visitor[Line]):
 
             normalize_prefix(node, inside_brackets=any_open_brackets)
             if self.mode.string_normalization and node.type == token.STRING:
-                node.value = normalize_string_prefix(
-                    node.value, remove_u_prefix=self.remove_u_prefix
-                )
+                node.value = normalize_string_prefix(node.value, remove_u_prefix=self.remove_u_prefix)
                 node.value = normalize_string_quotes(node.value)
             if node.type == token.NUMBER:
                 normalize_numeric_literal(node)
@@ -120,13 +119,11 @@ class LineGenerator(Visitor[Line]):
         # Finally, emit the dedent.
         yield from self.line(-1)
 
-    def visit_stmt(
-        self, node: Node, keywords: Set[str], parens: Set[str]
-    ) -> Iterator[Line]:
+    def visit_stmt(self, node: Node, keywords: Set[str], parens: Set[str]) -> Iterator[Line]:
         """Visit a statement.
 
         This implementation is shared for `if`, `while`, `for`, `try`, `except`,
-        `def`, `with`, `class`, `assert` and assignments.
+        `def`, `with`, `class`, `assert`, `match`, `case` and assignments.
 
         The relevant Python language `keywords` for a given statement will be
         NAME leaves within it. This methods puts those on a separate line.
@@ -162,11 +159,7 @@ class LineGenerator(Visitor[Line]):
                 yield from self.line(-1)
 
         else:
-            if (
-                not self.mode.is_pyi
-                or not node.parent
-                or not is_stub_suite(node.parent)
-            ):
+            if not self.mode.is_pyi or not node.parent or not is_stub_suite(node.parent):
                 yield from self.line()
             yield from self.visit_default(node)
 
@@ -211,11 +204,7 @@ class LineGenerator(Visitor[Line]):
         -2 ** 8 -> -(2 ** 8)
         """
         _operator, operand = node.children
-        if (
-            operand.type == syms.power
-            and len(operand.children) == 3
-            and operand.children[1].type == token.DOUBLESTAR
-        ):
+        if operand.type == syms.power and len(operand.children) == 3 and operand.children[1].type == token.DOUBLESTAR:
             lpar = Leaf(token.LPAR, "(")
             rpar = Leaf(token.RPAR, ")")
             index = operand.remove() or 0
@@ -226,8 +215,9 @@ class LineGenerator(Visitor[Line]):
         if is_docstring(leaf) and "\\\n" not in leaf.value:
             # We're ignoring docstrings with backslash newline escapes because changing
             # indentation of those changes the AST representation of the code.
-            prefix = get_string_prefix(leaf.value)
-            docstring = leaf.value[len(prefix) :]  # Remove the prefix
+            docstring = normalize_string_prefix(leaf.value, self.remove_u_prefix)
+            prefix = get_string_prefix(docstring)
+            docstring = docstring[len(prefix) :]  # Remove the prefix
             quote_char = docstring[0]
             # A natural way to remove the outer quotes is to do:
             #   docstring = docstring.strip(quote_char)
@@ -272,14 +262,10 @@ class LineGenerator(Visitor[Line]):
         v = self.visit_stmt
         Ø: Set[str] = set()
         self.visit_assert_stmt = partial(v, keywords={"assert"}, parens={"assert", ","})
-        self.visit_if_stmt = partial(
-            v, keywords={"if", "else", "elif"}, parens={"if", "elif"}
-        )
+        self.visit_if_stmt = partial(v, keywords={"if", "else", "elif"}, parens={"if", "elif"})
         self.visit_while_stmt = partial(v, keywords={"while", "else"}, parens={"while"})
         self.visit_for_stmt = partial(v, keywords={"for", "else"}, parens={"for", "in"})
-        self.visit_try_stmt = partial(
-            v, keywords={"try", "except", "else", "finally"}, parens=Ø
-        )
+        self.visit_try_stmt = partial(v, keywords={"try", "except", "else", "finally"}, parens=Ø)
         self.visit_except_clause = partial(v, keywords={"except"}, parens=Ø)
         self.visit_with_stmt = partial(v, keywords={"with"}, parens=Ø)
         self.visit_funcdef = partial(v, keywords={"def"}, parens=Ø)
@@ -291,10 +277,12 @@ class LineGenerator(Visitor[Line]):
         self.visit_async_funcdef = self.visit_async_stmt
         self.visit_decorated = self.visit_decorators
 
+        # PEP 634
+        self.visit_match_stmt = partial(v, keywords={"match"}, parens=Ø)
+        self.visit_case_block = partial(v, keywords={"case"}, parens=Ø)
 
-def transform_line(
-    line: Line, mode: Mode, features: Collection[Feature] = ()
-) -> Iterator[Line]:
+
+def transform_line(line: Line, mode: Mode, features: Collection[Feature] = ()) -> Iterator[Line]:
     """Transform a `line`, potentially splitting it into many lines.
 
     They should fit in the allotted `line_length` but might not be able to.
@@ -334,7 +322,7 @@ def transform_line(
         transformers = [left_hand_split]
     else:
 
-        def rhs(line: Line, features: Collection[Feature]) -> Iterator[Line]:
+        def _rhs(self: object, line: Line, features: Collection[Feature]) -> Iterator[Line]:
             """Wraps calls to `right_hand_split`.
 
             The calls increasingly `omit` right-hand trailers (bracket pairs with
@@ -342,9 +330,7 @@ def transform_line(
             bracket pair instead.
             """
             for omit in generate_trailers_to_omit(line, mode.line_length):
-                lines = list(
-                    right_hand_split(line, mode.line_length, features, omit=omit)
-                )
+                lines = list(right_hand_split(line, mode.line_length, features, omit=omit))
                 # Note: this check is only able to figure out if the first line of the
                 # *current* transformation fits in the line length.  This is true only
                 # for simple cases.  All others require running more transforms via
@@ -357,9 +343,13 @@ def transform_line(
             # This mostly happens to multiline strings that are by definition
             # reported as not fitting a single line, as well as lines that contain
             # trailing commas (those have to be exploded).
-            yield from right_hand_split(
-                line, line_length=mode.line_length, features=features
-            )
+            yield from right_hand_split(line, line_length=mode.line_length, features=features)
+
+        # HACK: nested functions (like _rhs) compiled by mypyc don't retain their
+        # __name__ attribute which is needed in `run_transformer` further down.
+        # Unfortunately a nested class breaks mypyc too. So a class must be created
+        # via type ... https://github.com/mypyc/mypyc/issues/884
+        rhs = type("rhs", (), {"__call__": _rhs})()
 
         if mode.experimental_string_processing:
             if line.inside_brackets:
@@ -415,11 +405,7 @@ def left_hand_split(line: Line, _features: Collection[Feature] = ()) -> Iterator
     current_leaves = head_leaves
     matching_bracket: Optional[Leaf] = None
     for leaf in line.leaves:
-        if (
-            current_leaves is body_leaves
-            and leaf.type in CLOSING_BRACKETS
-            and leaf.opening_bracket is matching_bracket
-        ):
+        if current_leaves is body_leaves and leaf.type in CLOSING_BRACKETS and leaf.opening_bracket is matching_bracket:
             current_leaves = tail_leaves if body_leaves else head_leaves
         current_leaves.append(leaf)
         if current_leaves is head_leaves:
@@ -502,14 +488,9 @@ def right_hand_split(
             yield from right_hand_split(line, line_length, features=features, omit=omit)
             return
 
-        except CannotSplit:
-            if not (
-                can_be_split(body)
-                or is_line_short_enough(body, line_length=line_length)
-            ):
-                raise CannotSplit(
-                    "Splitting failed, body is still too long and can't be split."
-                )
+        except CannotSplit as e:
+            if not (can_be_split(body) or is_line_short_enough(body, line_length=line_length)):
+                raise CannotSplit("Splitting failed, body is still too long and can't be split.") from e
 
             elif head.contains_multiline_strings() or tail.contains_multiline_strings():
                 raise CannotSplit(
@@ -517,7 +498,7 @@ def right_hand_split(
                     " satisfy the splitting algorithm because the head or the tail"
                     " contains multiline strings which by definition never fit one"
                     " line."
-                )
+                ) from e
 
     ensure_visible(opening_bracket)
     ensure_visible(closing_bracket)
@@ -546,10 +527,7 @@ def bracket_split_succeeded_or_raise(head: Line, body: Line, tail: Line) -> None
             raise CannotSplit("Splitting brackets produced the same line")
 
         elif tail_len < 3:
-            raise CannotSplit(
-                f"Splitting brackets on an empty body to save {tail_len} characters is"
-                " not worth it"
-            )
+            raise CannotSplit(f"Splitting brackets on an empty body to save {tail_len} characters is" " not worth it")
 
 
 def bracket_split_build_line(
@@ -573,6 +551,20 @@ def bracket_split_build_line(
                 original.is_def
                 and opening_bracket.value == "("
                 and not any(leaf.type == token.COMMA for leaf in leaves)
+                # In particular, don't add one within a parenthesized return annotation.
+                # Unfortunately the indicator we're in a return annotation (RARROW) may
+                # be defined directly in the parent node, the parent of the parent ...
+                # and so on depending on how complex the return annotation is.
+                # This isn't perfect and there's some false negatives but they are in
+                # contexts were a comma is actually fine.
+                and not any(
+                    node.prev_sibling.type == RARROW
+                    for node in (
+                        leaves[0].parent,
+                        getattr(leaves[0].parent, "parent", None),
+                    )
+                    if isinstance(node, Node) and isinstance(node.prev_sibling, Leaf)
+                )
             )
 
             if original.is_import or no_commas:
@@ -620,21 +612,19 @@ def delimiter_split(line: Line, features: Collection[Feature] = ()) -> Iterator[
     try:
         last_leaf = line.leaves[-1]
     except IndexError:
-        raise CannotSplit("Line empty")
+        raise CannotSplit("Line empty") from None
 
     bt = line.bracket_tracker
     try:
         delimiter_priority = bt.max_delimiter_priority(exclude={id(last_leaf)})
     except ValueError:
-        raise CannotSplit("No delimiters found")
+        raise CannotSplit("No delimiters found") from None
 
     if delimiter_priority == DOT_PRIORITY:
         if bt.delimiter_count_with_priority(delimiter_priority) == 1:
             raise CannotSplit("Splitting a single attribute from its owner looks wrong")
 
-    current_line = Line(
-        mode=line.mode, depth=line.depth, inside_brackets=line.inside_brackets
-    )
+    current_line = Line(mode=line.mode, depth=line.depth, inside_brackets=line.inside_brackets)
     lowest_depth = sys.maxsize
     trailing_comma_safe = True
 
@@ -646,9 +636,7 @@ def delimiter_split(line: Line, features: Collection[Feature] = ()) -> Iterator[
         except ValueError:
             yield current_line
 
-            current_line = Line(
-                mode=line.mode, depth=line.depth, inside_brackets=line.inside_brackets
-            )
+            current_line = Line(mode=line.mode, depth=line.depth, inside_brackets=line.inside_brackets)
             current_line.append(leaf)
 
     for leaf in line.leaves:
@@ -660,21 +648,15 @@ def delimiter_split(line: Line, features: Collection[Feature] = ()) -> Iterator[
         lowest_depth = min(lowest_depth, leaf.bracket_depth)
         if leaf.bracket_depth == lowest_depth:
             if is_vararg(leaf, within={syms.typedargslist}):
-                trailing_comma_safe = (
-                    trailing_comma_safe and Feature.TRAILING_COMMA_IN_DEF in features
-                )
+                trailing_comma_safe = trailing_comma_safe and Feature.TRAILING_COMMA_IN_DEF in features
             elif is_vararg(leaf, within={syms.arglist, syms.argument}):
-                trailing_comma_safe = (
-                    trailing_comma_safe and Feature.TRAILING_COMMA_IN_CALL in features
-                )
+                trailing_comma_safe = trailing_comma_safe and Feature.TRAILING_COMMA_IN_CALL in features
 
         leaf_priority = bt.delimiters.get(id(leaf))
         if leaf_priority == delimiter_priority:
             yield current_line
 
-            current_line = Line(
-                mode=line.mode, depth=line.depth, inside_brackets=line.inside_brackets
-            )
+            current_line = Line(mode=line.mode, depth=line.depth, inside_brackets=line.inside_brackets)
     if current_line:
         if (
             trailing_comma_safe
@@ -688,16 +670,12 @@ def delimiter_split(line: Line, features: Collection[Feature] = ()) -> Iterator[
 
 
 @dont_increase_indentation
-def standalone_comment_split(
-    line: Line, features: Collection[Feature] = ()
-) -> Iterator[Line]:
+def standalone_comment_split(line: Line, features: Collection[Feature] = ()) -> Iterator[Line]:
     """Split standalone comments from the rest of the line."""
     if not line.contains_standalone_comments(0):
         raise CannotSplit("Line does not have any standalone comments")
 
-    current_line = Line(
-        mode=line.mode, depth=line.depth, inside_brackets=line.inside_brackets
-    )
+    current_line = Line(mode=line.mode, depth=line.depth, inside_brackets=line.inside_brackets)
 
     def append_to_line(leaf: Leaf) -> Iterator[Line]:
         """Append `leaf` to current line or to new line if appending impossible."""
@@ -707,9 +685,7 @@ def standalone_comment_split(
         except ValueError:
             yield current_line
 
-            current_line = Line(
-                line.mode, depth=line.depth, inside_brackets=line.inside_brackets
-            )
+            current_line = Line(line.mode, depth=line.depth, inside_brackets=line.inside_brackets)
             current_line.append(leaf)
 
     for leaf in line.leaves:
@@ -761,11 +737,7 @@ def normalize_invisible_parens(node: Node, parens_after: Set[str]) -> None:
             normalize_invisible_parens(child, parens_after=parens_after)
 
         # Add parentheses around long tuple unpacking in assignments.
-        if (
-            index == 0
-            and isinstance(child, Node)
-            and child.type == syms.testlist_star_expr
-        ):
+        if index == 0 and isinstance(child, Node) and child.type == syms.testlist_star_expr:
             check_lpar = True
 
         if check_lpar:
@@ -905,9 +877,7 @@ def generate_trailers_to_omit(line: Line, line_length: int) -> Iterator[Set[Leaf
                 if (
                     prev
                     and prev.type == token.COMMA
-                    and not is_one_tuple_between(
-                        leaf.opening_bracket, leaf, line.leaves
-                    )
+                    and not is_one_tuple_between(leaf.opening_bracket, leaf, line.leaves)
                 ):
                     # Never omit bracket pairs with trailing commas.
                     # We need to explode on those.
@@ -929,11 +899,7 @@ def generate_trailers_to_omit(line: Line, line_length: int) -> Iterator[Set[Leaf
                 inner_brackets.clear()
                 yield omit
 
-            if (
-                prev
-                and prev.type == token.COMMA
-                and not is_one_tuple_between(leaf.opening_bracket, leaf, line.leaves)
-            ):
+            if prev and prev.type == token.COMMA and not is_one_tuple_between(leaf.opening_bracket, leaf, line.leaves):
                 # Never omit bracket pairs with trailing commas.
                 # We need to explode on those.
                 break
@@ -960,25 +926,26 @@ def run_transformer(
 
         result.extend(transform_line(transformed_line, mode=mode, features=features))
 
-    if not (
-        transform.__name__ == "rhs"
-        and line.bracket_tracker.invisible
-        and not any(bracket.value for bracket in line.bracket_tracker.invisible)
-        and not line.contains_multiline_strings()
-        and not result[0].contains_uncollapsable_type_comments()
-        and not result[0].contains_unsplittable_type_ignore()
-        and not is_line_short_enough(result[0], line_length=mode.line_length)
+    if (
+        transform.__class__.__name__ != "rhs"
+        or not line.bracket_tracker.invisible
+        or any(bracket.value for bracket in line.bracket_tracker.invisible)
+        or line.contains_multiline_strings()
+        or result[0].contains_uncollapsable_type_comments()
+        or result[0].contains_unsplittable_type_ignore()
+        or is_line_short_enough(result[0], line_length=mode.line_length)
+        # If any leaves have no parents (which _can_ occur since
+        # `transform(line)` potentially destroys the line's underlying node
+        # structure), then we can't proceed. Doing so would cause the below
+        # call to `append_leaves()` to fail.
+        or any(leaf.parent is None for leaf in line.leaves)
     ):
         return result
 
     line_copy = line.clone()
     append_leaves(line_copy, line, line.leaves)
     features_fop = set(features) | {Feature.FORCE_OPTIONAL_PARENTHESES}
-    second_opinion = run_transformer(
-        line_copy, transform, mode, features_fop, line_str=line_str
-    )
-    if all(
-        is_line_short_enough(ln, line_length=mode.line_length) for ln in second_opinion
-    ):
+    second_opinion = run_transformer(line_copy, transform, mode, features_fop, line_str=line_str)
+    if all(is_line_short_enough(ln, line_length=mode.line_length) for ln in second_opinion):
         result = second_opinion
     return result

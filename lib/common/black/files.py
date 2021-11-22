@@ -13,18 +13,15 @@ from typing import (
     Pattern,
     Sequence,
     Tuple,
-    Union,
-    TYPE_CHECKING,
 )
 
+from mypy_extensions import mypyc_attr
 from pathspec import PathSpec
-import toml
+from pathspec.patterns.gitwildmatch import GitWildMatchPatternError
+import tomli
 
 from black.output import err
 from black.report import Report
-
-if TYPE_CHECKING:
-    import colorama  # noqa: F401
 
 
 @lru_cache()
@@ -38,15 +35,13 @@ def find_project_root(srcs: Sequence[str]) -> Path:
     project root, the root of the file system is returned.
     """
     if not srcs:
-        return Path("/").resolve()
+        srcs = [str(Path.cwd().resolve())]
 
     path_srcs = [Path(Path.cwd(), src).resolve() for src in srcs]
 
     # A list of lists of parents for each 'src'. 'src' is included as a
     # "parent" of itself if it is a directory
-    src_parents = [
-        list(path.parents) + ([path] if path.is_dir() else []) for path in path_srcs
-    ]
+    src_parents = [list(path.parents) + ([path] if path.is_dir() else []) for path in path_srcs]
 
     common_base = max(
         set.intersection(*(set(parents) for parents in src_parents)),
@@ -63,7 +58,7 @@ def find_project_root(srcs: Sequence[str]) -> Path:
         if (directory / "pyproject.toml").is_file():
             return directory
 
-    return directory
+    return directory  # type: ignore
 
 
 def find_pyproject_toml(path_search_start: Tuple[str, ...]) -> Optional[str]:
@@ -75,23 +70,21 @@ def find_pyproject_toml(path_search_start: Tuple[str, ...]) -> Optional[str]:
 
     try:
         path_user_pyproject_toml = find_user_pyproject_toml()
-        return (
-            str(path_user_pyproject_toml)
-            if path_user_pyproject_toml.is_file()
-            else None
-        )
+        return str(path_user_pyproject_toml) if path_user_pyproject_toml.is_file() else None
     except PermissionError as e:
         # We do not have access to the user-level config directory, so ignore it.
         err(f"Ignoring user configuration directory due to {e!r}")
         return None
 
 
+@mypyc_attr(patchable=True)
 def parse_pyproject_toml(path_config: str) -> Dict[str, Any]:
     """Parse a pyproject toml file, pulling out relevant parts for Black
 
-    If parsing fails, will raise a toml.TomlDecodeError
+    If parsing fails, will raise a tomli.TOMLDecodeError
     """
-    pyproject_toml = toml.load(path_config)
+    with open(path_config, encoding="utf8") as f:
+        pyproject_toml = tomli.loads(f.read())
     config = pyproject_toml.get("tool", {}).get("black", {})
     return {k.replace("--", "").replace("-", "_"): v for k, v in config.items()}
 
@@ -120,12 +113,14 @@ def get_gitignore(root: Path) -> PathSpec:
     if gitignore.is_file():
         with gitignore.open(encoding="utf-8") as gf:
             lines = gf.readlines()
-    return PathSpec.from_lines("gitwildmatch", lines)
+    try:
+        return PathSpec.from_lines("gitwildmatch", lines)
+    except GitWildMatchPatternError as e:
+        err(f"Could not parse {gitignore}: {e}")
+        raise
 
 
-def normalize_path_maybe_ignore(
-    path: Path, root: Path, report: Report
-) -> Optional[str]:
+def normalize_path_maybe_ignore(path: Path, root: Path, report: Report) -> Optional[str]:
     """Normalize `path`. May return `None` if `path` was ignored.
 
     `report` is where "path ignored" output goes.
@@ -164,6 +159,9 @@ def gen_python_files(
     force_exclude: Optional[Pattern[str]],
     report: Report,
     gitignore: Optional[PathSpec],
+    *,
+    verbose: bool,
+    quiet: bool,
 ) -> Iterator[Path]:
     """Generate all files under `path` whose paths are not excluded by the
     `exclude_regex`, `extend_exclude`, or `force_exclude` regexes,
@@ -194,9 +192,7 @@ def gen_python_files(
             continue
 
         if path_is_excluded(normalized_path, extend_exclude):
-            report.path_ignored(
-                child, "matches the --extend-exclude regular expression"
-            )
+            report.path_ignored(child, "matches the --extend-exclude regular expression")
             continue
 
         if path_is_excluded(normalized_path, force_exclude):
@@ -215,9 +211,13 @@ def gen_python_files(
                 force_exclude,
                 report,
                 gitignore + get_gitignore(child) if gitignore is not None else None,
+                verbose=verbose,
+                quiet=quiet,
             )
 
         elif child.is_file():
+            if child.suffix == ".ipynb":
+                continue
             include_match = include.search(normalized_path) if include else True
             if include_match:
                 yield child
@@ -225,7 +225,7 @@ def gen_python_files(
 
 def wrap_stream_for_windows(
     f: io.TextIOWrapper,
-) -> Union[io.TextIOWrapper, "colorama.AnsiToWin32"]:
+) -> io.TextIOWrapper:
     """
     Wrap stream with colorama's wrap_stream so colors are shown on Windows.
 
@@ -234,10 +234,4 @@ def wrap_stream_for_windows(
     to be wrapped for a Windows environment and will accordingly either return
     an `AnsiToWin32` wrapper or the original stream.
     """
-    try:
-        from colorama.initialise import wrap_stream
-    except ImportError:
-        return f
-    else:
-        # Set `strip=False` to avoid needing to modify test_express_diff_with_color.
-        return wrap_stream(f, convert=None, strip=False, autoreset=False, wrap=True)
+    return f

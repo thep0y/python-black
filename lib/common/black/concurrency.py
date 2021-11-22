@@ -19,7 +19,7 @@ def shutdown(loop: asyncio.AbstractEventLoop) -> None:
         if sys.version_info[:2] >= (3, 7):
             all_tasks = asyncio.all_tasks
         else:
-            all_tasks = asyncio.Task.all_tasks
+            all_tasks = asyncio.Task.all_tasks  # type: ignore
         # This part is borrowed from asyncio/runners.py in Python 3.7b2.
         to_cancel = [task for task in all_tasks(loop) if not task.done()]
         if not to_cancel:
@@ -27,9 +27,10 @@ def shutdown(loop: asyncio.AbstractEventLoop) -> None:
 
         for task in to_cancel:
             task.cancel()
-        loop.run_until_complete(
-            asyncio.gather(*to_cancel, loop=loop, return_exceptions=True)
-        )
+        if sys.version_info >= (3, 7):
+            loop.run_until_complete(asyncio.gather(*to_cancel, return_exceptions=True))
+        else:
+            loop.run_until_complete(asyncio.gather(*to_cancel, loop=loop, return_exceptions=True))
     finally:
         # `concurrent.futures.Future` objects cannot be cancelled once they
         # are already running. There might be some when the `shutdown()` happened.

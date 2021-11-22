@@ -49,7 +49,7 @@ MATH_PRIORITIES: Final = {
 DOT_PRIORITY: Final = 1
 
 
-class BracketMatchError(KeyError):
+class BracketMatchError(Exception):
     """Raised when an opening bracket is unable to be matched to a closing bracket."""
 
 
@@ -91,8 +91,7 @@ class BracketTracker:
                 opening_bracket = self.bracket_match.pop((self.depth, leaf.type))
             except KeyError as e:
                 raise BracketMatchError(
-                    "Unable to match a closing bracket to the following opening"
-                    f" bracket: {leaf}"
+                    "Unable to match a closing bracket to the following opening" f" bracket: {leaf}"
                 ) from e
             leaf.opening_bracket = opening_bracket
             if not leaf.value:
@@ -180,11 +179,7 @@ class BracketTracker:
 
     def maybe_decrement_after_lambda_arguments(self, leaf: Leaf) -> bool:
         """See `maybe_increment_lambda_arguments` above for explanation."""
-        if (
-            self._lambda_argument_depths
-            and self._lambda_argument_depths[-1] == self.depth
-            and leaf.type == token.COLON
-        ):
+        if self._lambda_argument_depths and self._lambda_argument_depths[-1] == self.depth and leaf.type == token.COLON:
             self.depth -= 1
             self._lambda_argument_depths.pop()
             return True
@@ -231,21 +226,13 @@ def is_split_before_delimiter(leaf: Leaf, previous: Optional[Leaf] = None) -> Pr
     ):
         return DOT_PRIORITY
 
-    if (
-        leaf.type in MATH_OPERATORS
-        and leaf.parent
-        and leaf.parent.type not in {syms.factor, syms.star_expr}
-    ):
+    if leaf.type in MATH_OPERATORS and leaf.parent and leaf.parent.type not in {syms.factor, syms.star_expr}:
         return MATH_PRIORITIES[leaf.type]
 
     if leaf.type in COMPARATORS:
         return COMPARATOR_PRIORITY
 
-    if (
-        leaf.type == token.STRING
-        and previous is not None
-        and previous.type == token.STRING
-    ):
+    if leaf.type == token.STRING and previous is not None and previous.type == token.STRING:
         return STRING_PRIORITY
 
     if leaf.type not in {token.NAME, token.ASYNC}:
@@ -257,17 +244,10 @@ def is_split_before_delimiter(leaf: Leaf, previous: Optional[Leaf] = None) -> Pr
         and leaf.parent.type in {syms.comp_for, syms.old_comp_for}
         or leaf.type == token.ASYNC
     ):
-        if (
-            not isinstance(leaf.prev_sibling, Leaf)
-            or leaf.prev_sibling.value != "async"
-        ):
+        if not isinstance(leaf.prev_sibling, Leaf) or leaf.prev_sibling.value != "async":
             return COMPREHENSION_PRIORITY
 
-    if (
-        leaf.value == "if"
-        and leaf.parent
-        and leaf.parent.type in {syms.comp_if, syms.old_comp_if}
-    ):
+    if leaf.value == "if" and leaf.parent and leaf.parent.type in {syms.comp_if, syms.old_comp_if}:
         return COMPREHENSION_PRIORITY
 
     if leaf.value in {"if", "else"} and leaf.parent and leaf.parent.type == syms.test:
@@ -280,11 +260,7 @@ def is_split_before_delimiter(leaf: Leaf, previous: Optional[Leaf] = None) -> Pr
         leaf.value == "in"
         and leaf.parent
         and leaf.parent.type in {syms.comp_op, syms.comparison}
-        and not (
-            previous is not None
-            and previous.type == token.NAME
-            and previous.value == "not"
-        )
+        and not (previous is not None and previous.type == token.NAME and previous.value == "not")
     ):
         return COMPARATOR_PRIORITY
 
@@ -292,11 +268,7 @@ def is_split_before_delimiter(leaf: Leaf, previous: Optional[Leaf] = None) -> Pr
         leaf.value == "not"
         and leaf.parent
         and leaf.parent.type == syms.comp_op
-        and not (
-            previous is not None
-            and previous.type == token.NAME
-            and previous.value == "is"
-        )
+        and not (previous is not None and previous.type == token.NAME and previous.value == "is")
     ):
         return COMPARATOR_PRIORITY
 
