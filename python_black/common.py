@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: common.py
 # @Created:   2021-03-27 09:55:27
-# @Modified:  2021-11-22 11:47:04
+# @Modified:  2022-02-04 10:24:39
 
 from typing import Optional
 import sublime
@@ -42,22 +42,10 @@ def get_package_path() -> str:
 
 
 def append_third_lib(python_black_path: str):
-    """添加项目中的依赖到系统环境中"""
-    third_libs_path = os.path.join(python_black_path, "lib")
+    """Append `black` package to `sys.path`"""
+    libs_path = os.path.join(python_black_path, "lib")
 
-    # 针对不同系统导入不同包
-    system_info = get_system_info()
-
-    system_lib = os.path.join(third_libs_path, system_info)
-    common_lib = os.path.join(third_libs_path, "common")
-
-    if system_lib not in sys.path:
-        # 添加对应的系统库
-        sys.path.append(system_lib)
-
-    if common_lib not in sys.path:
-        # 添加通用库，没有引用二进制库的纯 python 库放到通用库中
-        sys.path.append(common_lib)
+    sys.path.append(libs_path)
 
 
 def md5(filename: str) -> Optional[str]:
@@ -84,7 +72,9 @@ def md5(filename: str) -> Optional[str]:
 def extract(python_black_path: str) -> None:
     # 检查当前是在 sublime-package 包中执行的还是在 packages 目录中执行的
     current_path = os.path.abspath(os.path.dirname(__file__))
-    installed_pkg_path = os.path.join(sublime.installed_packages_path(), INSTALLED_PACKAGE_NAME)
+    installed_pkg_path = os.path.join(
+        sublime.installed_packages_path(), INSTALLED_PACKAGE_NAME
+    )
 
     if not os.path.exists(installed_pkg_path):
         return

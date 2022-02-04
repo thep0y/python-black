@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Author: thepoy
-# @Email: thepoy@163.com
+# @Author:    thepoy
+# @Email:     thepoy@163.com
 # @File Name: commands.py
-# @Created: 2021-03-27 09:55:27
-# @Modified: 2021-06-11 23:37:37
+# @Created:   2022-02-04 10:51:04
+# @Modified:  2022-02-04 10:52:47
 
 import sublime
 import sublime_plugin
@@ -13,7 +13,11 @@ import sublime_plugin
 from os import path
 from typing import List
 
-from .python_black.constants import SETTINGS_FILE_NAME, CONFIGURATION_FILENAME, CONFIGURATION_CONTENTS
+from .python_black.constants import (
+    SETTINGS_FILE_NAME,
+    CONFIGURATION_FILENAME,
+    CONFIGURATION_CONTENTS,
+)
 from .python_black.utils import black_format
 
 
@@ -31,7 +35,9 @@ class BlackCommand(sublime_plugin.TextCommand):
     def run(self, edit: sublime.Edit):
         filename = self.view.file_name()
         if filename and not filename.endswith(".py"):
-            sublime.status_message(f"black: The current file is not a python script file: {filename}")
+            sublime.status_message(
+                f"black: The current file is not a python script file: {filename}"
+            )
             return
         if not filename:
             sublime.error_message("black: Unrecognized file name")
@@ -41,7 +47,14 @@ class BlackCommand(sublime_plugin.TextCommand):
         if not isinstance(source, str) and hasattr(source, "decode"):
             source = source.decode(encoding)
         if filename:
-            black_format(source=source, filepath=filename, region=region, encoding=encoding, edit=edit, view=self.view)
+            black_format(
+                source=source,
+                filepath=filename,
+                region=region,
+                encoding=encoding,
+                edit=edit,
+                view=self.view,
+            )
 
 
 class BlackAllFilesCommand(sublime_plugin.TextCommand):
@@ -49,14 +62,16 @@ class BlackAllFilesCommand(sublime_plugin.TextCommand):
     # 应该传入文件路径，而不是文件内容
     # 这里还用 TextCommand ？还是换 WindowCommand？
     def run(self, edit):
-        sublime.error_message("没写完")
+        sublime.error_message("this feature is not yet complete")
 
 
 class BlackCreateConfiguration(sublime_plugin.WindowCommand):
     def run(self) -> None:
         folders = self.window.folders()
         if len(folders) == 0:
-            sublime.message_dialog("No folders found in the window. Please add a folder first.")
+            sublime.message_dialog(
+                "No folders found in the window. Please add a folder first."
+            )
         elif len(folders) == 1:
             self._create_configuration(folders[0])
         else:
@@ -80,7 +95,9 @@ class BlackCreateConfiguration(sublime_plugin.WindowCommand):
         if attempt > 10:
             return
         if view.is_loading():
-            sublime.set_timeout(lambda: self._poll_view_until_loaded(view, attempt + 1), 100)
+            sublime.set_timeout(
+                lambda: self._poll_view_until_loaded(view, attempt + 1), 100
+            )
         else:
             self._on_view_loaded(view)
 
@@ -112,4 +129,4 @@ def plugin_loaded():
     package_path = get_package_path()
     extract(package_path)
     append_third_lib(package_path)
-    sublime.status_message("python-black: Third-party dependencies loaded")
+    sublime.status_message("python-black: third-party dependencies loaded")

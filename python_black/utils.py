@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Author: thepoy
-# @Email: thepoy@163.com
+# @Author:    thepoy
+# @Email:     thepoy@163.com
 # @File Name: utils.py
-# @Created: 2021-03-27 09:55:27
-# @Modified: 2021-10-05 22:29:12
+# @Created:   2022-02-04 10:51:04
+# @Modified:  2022-02-04 10:52:43
 
 import sublime
 import os
@@ -25,7 +25,10 @@ ViewState = namedtuple("ViewState", ["row", "col", "vector"])
 
 def create_diff(source: str, formatted: str, filepath: str) -> str:
     result = difflib.unified_diff(
-        StringIO(source).readlines(), StringIO(formatted).readlines(), "original: %s" % filepath, "fixed: %s" % filepath
+        StringIO(source).readlines(),
+        StringIO(formatted).readlines(),
+        "original: %s" % filepath,
+        "fixed: %s" % filepath,
     )
     # fix issue with join two last lines
     lines = [item for item in result]
@@ -46,10 +49,17 @@ def system_env():
 def popen(cmd: List[Any]):
     try:
         return subprocess.Popen(
-            cmd, env=system_env(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, bufsize=1
+            cmd,
+            env=system_env(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            bufsize=1,
         )
     except FileNotFoundError:
-        sublime.error_message("Unable to find the command, did you not install `black`?")
+        sublime.error_message(
+            "Unable to find the command, did you not install `black`?"
+        )
 
 
 def new_view(encoding: str, text: str):
@@ -79,7 +89,9 @@ def show_result(result):
     # show diff.
     if diffs:
         new_view("utf-8", "\n".join(diffs))
-    sublime.set_timeout_async(lambda: sublime.status_message(""), STATUS_MESSAGE_TIMEOUT)
+    sublime.set_timeout_async(
+        lambda: sublime.status_message(""), STATUS_MESSAGE_TIMEOUT
+    )
 
 
 def find_current_file_path(view: sublime.View, filename: str) -> Optional[str]:
@@ -136,7 +148,9 @@ def restore_state(view: sublime.View, state: ViewState):
     view.set_viewport_position(state.vector)
 
 
-def replace_text(edit: sublime.Edit, view: sublime.View, region: sublime.Region, text: str):
+def replace_text(
+    edit: sublime.Edit, view: sublime.View, region: sublime.Region, text: str
+):
     state = save_state(view)
     if region.b - region.a < view.size():
         lines = text.split("\n")
@@ -148,7 +162,12 @@ def replace_text(edit: sublime.Edit, view: sublime.View, region: sublime.Region,
 
 
 def format_source_file(
-    edit: sublime.Edit, formatted: str, filepath: str, view: sublime.View, region: sublime.Region, encoding: str
+    edit: sublime.Edit,
+    formatted: str,
+    filepath: str,
+    view: sublime.View,
+    region: sublime.Region,
+    encoding: str,
 ):
     if view:
         replace_text(edit, view, region, formatted)
@@ -163,7 +182,9 @@ def get_site_packages_path(command: str) -> List[str]:
     else:
         lib_path = os.path.join(command.replace("bin/black", ""), "lib")
         return [
-            os.path.join(lib_path, i, "site-packages") for i in os.listdir(lib_path) if i.lower().startswith("python")
+            os.path.join(lib_path, i, "site-packages")
+            for i in os.listdir(lib_path)
+            if i.lower().startswith("python")
         ]
 
 

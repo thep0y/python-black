@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Author: thepoy
-# @Email: thepoy@163.com
+# @Author:    thepoy
+# @Email:     thepoy@163.com
 # @File Name: constants.py
-# @Created: 2021-03-27 09:55:27
-# @Modified:  2021-11-22 13:16:14
+# @Created:   2022-02-04 10:51:04
+# @Modified:  2022-02-04 10:52:58
 
 PACKAGE_NAME = "python-black"
 INSTALLED_PACKAGE_NAME = f"{PACKAGE_NAME}.sublime-package"

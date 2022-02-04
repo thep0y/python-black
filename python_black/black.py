@@ -1,3 +1,11 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# @Author:    thepoy
+# @Email:     thepoy@163.com
+# @File Name: black.py
+# @Created:   2022-02-04 10:51:04
+# @Modified:  2022-02-04 10:51:23
+
 import sublime
 import os
 import sys
@@ -77,7 +85,9 @@ def read_pyproject_toml(
     return default_map, config_file
 
 
-def really_format(code: str, src: Tuple[str, ...], config_file: Optional[str] = None) -> Optional[str]:
+def really_format(
+    code: str, src: Tuple[str, ...], config_file: Optional[str] = None
+) -> Optional[str]:
     """
     Directly call the format function of the `black`
     package to complete the formatting of the code.
