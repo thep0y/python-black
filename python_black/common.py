@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: common.py
 # @Created:   2021-03-27 09:55:27
-# @Modified:  2022-02-04 10:24:39
+# @Modified:  2022-02-04 12:54:39
 
 from typing import Optional
 import sublime
@@ -39,13 +39,6 @@ def get_package_path() -> str:
     packages_path = sublime.packages_path()
     python_black_path = os.path.join(packages_path, PACKAGE_NAME)
     return python_black_path
-
-
-def append_third_lib(python_black_path: str):
-    """Append `black` package to `sys.path`"""
-    libs_path = os.path.join(python_black_path, "lib")
-
-    sys.path.append(libs_path)
 
 
 def md5(filename: str) -> Optional[str]:
