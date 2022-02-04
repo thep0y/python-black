@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: utils.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-02-04 10:52:43
+# @Modified:  2022-02-04 13:06:04
 
 import sublime
 import os
@@ -12,7 +12,6 @@ import sys
 import subprocess
 import locale
 import difflib
-
 
 from io import StringIO
 from typing import Any, List, Optional
