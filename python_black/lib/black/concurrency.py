@@ -3,7 +3,7 @@ import logging
 import sys
 from typing import Any, Iterable
 
-from black.output import err
+from .output import err
 
 
 def cancel(tasks: Iterable["asyncio.Task[Any]"]) -> None:

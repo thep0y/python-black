@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
-from black.output import out, err
+from .output import out, err
 
 
 class Changed(Enum):

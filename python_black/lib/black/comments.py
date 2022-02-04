@@ -7,13 +7,13 @@ from typing import Iterator, List, Optional, Union
 if sys.version_info >= (3, 8):
     from typing import Final
 else:
-    from typing_extensions import Final
+    from ..typing_extensions import Final
 
-from blib2to3.pytree import Node, Leaf
-from blib2to3.pgen2 import token
+from ..blib2to3.pytree import Node, Leaf
+from ..blib2to3.pgen2 import token
 
-from black.nodes import first_leaf_column, preceding_leaf, container_of
-from black.nodes import STANDALONE_COMMENT, WHITESPACE
+from .nodes import first_leaf_column, preceding_leaf, container_of
+from .nodes import STANDALONE_COMMENT, WHITESPACE
 
 # types
 LN = Union[Leaf, Node]

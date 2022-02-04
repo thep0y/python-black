@@ -32,7 +32,7 @@ without having to invoke the Python pgen C program.
 import re
 
 # Local imports
-from pgen2 import grammar, token
+from . import grammar, token
 
 
 class Converter(grammar.Grammar):

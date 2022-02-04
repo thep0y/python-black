@@ -4,11 +4,11 @@ import tokenize
 from typing import Generator, Iterator, List, Set, Tuple, Optional
 
 
-from black.nodes import STARS, syms, is_simple_decorator_expression, is_string_token
-from black.lines import Line, EmptyLineTracker
-from black.linegen import transform_line, LineGenerator, LN
-from black.comments import normalize_fmt_off
-from black.mode import (
+from .nodes import STARS, syms, is_simple_decorator_expression, is_string_token
+from .lines import Line, EmptyLineTracker
+from .linegen import transform_line, LineGenerator, LN
+from .comments import normalize_fmt_off
+from .mode import (
     Mode,
     TargetVersion,
     Feature,
@@ -16,14 +16,14 @@ from black.mode import (
     VERSION_TO_FEATURES,
     FUTURE_FLAG_TO_FEATURE,
 )
-from black.parsing import lib2to3_parse
+from .parsing import lib2to3_parse
 
 
 # lib2to3 fork
-from blib2to3.pytree import Node, Leaf
-from blib2to3.pgen2 import token
+from ..blib2to3.pytree import Node, Leaf
+from ..blib2to3.pgen2 import token
 
-from _black_version import version as __version__
+from .._black_version import version as __version__
 
 # types
 FileContent = str

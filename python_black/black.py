@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: black.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-02-04 10:51:23
+# @Modified:  2022-02-04 11:05:15
 
 import sublime
 import os
@@ -13,10 +13,10 @@ import sys
 from pathlib import Path
 from typing import Optional, Any, Dict, Tuple, List
 
-from black import format_str  # type: ignore
-from black.mode import Mode, TargetVersion  # type: ignore
-from black.files import find_pyproject_toml, parse_pyproject_toml  # type: ignore
-from black.const import DEFAULT_LINE_LENGTH, DEFAULT_INCLUDES  # type: ignore
+from .lib.black import format_str  # type: ignore
+from .lib.black.mode import Mode, TargetVersion  # type: ignore
+from .lib.black.files import find_pyproject_toml, parse_pyproject_toml  # type: ignore
+from .lib.black.const import DEFAULT_LINE_LENGTH, DEFAULT_INCLUDES  # type: ignore
 
 
 def out(msg: str):

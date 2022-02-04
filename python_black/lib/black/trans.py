@@ -24,26 +24,26 @@ from typing import (
 import sys
 
 if sys.version_info < (3, 8):
-    from typing_extensions import Literal, Final
+    from ..typing_extensions import Literal, Final
 else:
     from typing import Literal, Final
 
-from mypy_extensions import trait
+from ..mypy_extensions import trait
 
-from black.rusty import Result, Ok, Err
+from .rusty import Result, Ok, Err
 
-from black.mode import Feature
-from black.nodes import syms, replace_child, parent_type
-from black.nodes import is_empty_par, is_empty_lpar, is_empty_rpar
-from black.nodes import OPENING_BRACKETS, CLOSING_BRACKETS, STANDALONE_COMMENT
-from black.lines import Line, append_leaves
-from black.brackets import BracketMatchError
-from black.comments import contains_pragma_comment
-from black.strings import has_triple_quotes, get_string_prefix, assert_is_leaf_string
-from black.strings import normalize_string_quotes
+from .mode import Feature
+from .nodes import syms, replace_child, parent_type
+from .nodes import is_empty_par, is_empty_lpar, is_empty_rpar
+from .nodes import OPENING_BRACKETS, CLOSING_BRACKETS, STANDALONE_COMMENT
+from .lines import Line, append_leaves
+from .brackets import BracketMatchError
+from .comments import contains_pragma_comment
+from .strings import has_triple_quotes, get_string_prefix, assert_is_leaf_string
+from .strings import normalize_string_quotes
 
-from blib2to3.pytree import Leaf, Node
-from blib2to3.pgen2 import token
+from ..blib2to3.pytree import Leaf, Node
+from ..blib2to3.pgen2 import token
 
 
 class CannotTransform(Exception):

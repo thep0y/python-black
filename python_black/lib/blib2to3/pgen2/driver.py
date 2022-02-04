@@ -41,9 +41,9 @@ from dataclasses import dataclass, field
 # Pgen imports
 from . import grammar, parse, token, tokenize, pgen
 from logging import Logger
-from blib2to3.pytree import NL
-from blib2to3.pgen2.grammar import Grammar
-from blib2to3.pgen2.tokenize import GoodTokenInfo
+from ..pytree import NL
+from .grammar import Grammar
+from .tokenize import GoodTokenInfo
 
 Path = Union[str, "os.PathLike[str]"]
 

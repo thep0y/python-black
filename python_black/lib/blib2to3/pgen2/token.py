@@ -4,7 +4,7 @@ import sys
 from typing import Dict
 
 if sys.version_info < (3, 8):
-    from typing_extensions import Final
+    from ...typing_extensions import Final
 else:
     from typing import Final
 

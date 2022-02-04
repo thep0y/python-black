@@ -44,17 +44,16 @@ from typing import (
 if sys.version_info >= (3, 8):
     from typing import Final
 else:
-    from typing_extensions import Final
+    from ...typing_extensions import Final
 
-from blib2to3.pgen2.token import *
-from blib2to3.pgen2.grammar import Grammar
+from .token import *
+from .grammar import Grammar
 
 __author__ = "Ka-Ping Yee <ping@lfw.org>"
 __credits__ = "GvR, ESR, Tim Peters, Thomas Wouters, Fred Drake, Skip Montanaro"
 
 import re
 from codecs import BOM_UTF8, lookup
-from blib2to3.pgen2.token import *
 
 from . import token
 

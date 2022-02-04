@@ -16,21 +16,21 @@ from typing import (
 if sys.version_info >= (3, 8):
     from typing import Final
 else:
-    from typing_extensions import Final
+    from ..typing_extensions import Final
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
 else:
-    from typing_extensions import TypeGuard
+    from ..typing_extensions import TypeGuard
 
-from mypy_extensions import mypyc_attr
+from ..mypy_extensions import mypyc_attr
 
 # lib2to3 fork
-from blib2to3.pytree import Node, Leaf, type_repr, NL
-from blib2to3 import pygram
-from blib2to3.pgen2 import token
+from ..blib2to3.pytree import Node, Leaf, type_repr, NL
+from ..blib2to3 import pygram
+from ..blib2to3.pgen2 import token
 
-from black.cache import CACHE_DIR
-from black.strings import has_triple_quotes
+from .cache import CACHE_DIR
+from .strings import has_triple_quotes
 
 
 pygram.initialize(CACHE_DIR)

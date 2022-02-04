@@ -14,11 +14,11 @@ from typing import Dict, Set
 from warnings import warn
 
 if sys.version_info < (3, 8):
-    from typing_extensions import Final
+    from ..typing_extensions import Final
 else:
     from typing import Final
 
-from black.const import DEFAULT_LINE_LENGTH
+from .const import DEFAULT_LINE_LENGTH
 
 
 class TargetVersion(Enum):

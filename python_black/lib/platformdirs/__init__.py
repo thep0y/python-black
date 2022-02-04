@@ -10,22 +10,29 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
-    from typing_extensions import Literal  # pragma: no cover
+    from ..typing_extensions import Literal  # pragma: no cover
 
 from .api import PlatformDirsABC
 
 
 def _set_platform_dir_class() -> type[PlatformDirsABC]:
-    if os.getenv("ANDROID_DATA") == "/data" and os.getenv("ANDROID_ROOT") == "/system":
-        module, name = "platformdirs.android", "Android"
-    elif sys.platform == "win32":
-        module, name = "platformdirs.windows", "Windows"
+    if sys.platform == "win32":
+        module, name = ".windows", "Windows"
+        from .windows import Windows
+
+        result = Windows
     elif sys.platform == "darwin":
-        module, name = "platformdirs.macos", "MacOS"
+        module, name = ".macos", "MacOS"
+        from .macos import MacOS
+
+        result = MacOS
     else:
-        module, name = "platformdirs.unix", "Unix"
-    result: type[PlatformDirsABC] = getattr(importlib.import_module(module), name)
+        module, name = ".unix", "Unix"
+        from .unix import Unix
+
+        result = Unix
     return result
 
 

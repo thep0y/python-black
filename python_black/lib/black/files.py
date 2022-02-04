@@ -13,16 +13,15 @@ from typing import (
     Pattern,
     Sequence,
     Tuple,
-    Union,
 )
 
-from mypy_extensions import mypyc_attr
-from pathspec import PathSpec
-from pathspec.patterns.gitwildmatch import GitWildMatchPatternError
-import tomli
+from ..mypy_extensions import mypyc_attr
+from ..pathspec import PathSpec
+from ..pathspec.patterns.gitwildmatch import GitWildMatchPatternError
+from ..tomli import load as load_toml
 
-from black.output import err
-from black.report import Report
+from .output import err
+from .report import Report
 
 
 @lru_cache()
@@ -89,7 +88,7 @@ def parse_pyproject_toml(path_config: str) -> Dict[str, Any]:
     If parsing fails, will raise a tomli.TOMLDecodeError
     """
     with open(path_config, "rb") as f:
-        pyproject_toml = tomli.load(f)
+        pyproject_toml = load_toml(f)
     config = pyproject_toml.get("tool", {}).get("black", {})
     return {k.replace("--", "").replace("-", "_"): v for k, v in config.items()}
 

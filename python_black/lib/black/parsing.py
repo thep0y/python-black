@@ -7,19 +7,19 @@ import sys
 from typing import Any, Iterable, Iterator, List, Set, Tuple, Type, Union
 
 if sys.version_info < (3, 8):
-    from typing_extensions import Final
+    from ..typing_extensions import Final
 else:
     from typing import Final
 
 # lib2to3 fork
-from blib2to3.pytree import Node, Leaf
-from blib2to3 import pygram
-from blib2to3.pgen2 import driver
-from blib2to3.pgen2.grammar import Grammar
-from blib2to3.pgen2.parse import ParseError
+from ..blib2to3.pytree import Node, Leaf
+from ..blib2to3 import pygram
+from ..blib2to3.pgen2 import driver
+from ..blib2to3.pgen2.grammar import Grammar
+from ..blib2to3.pgen2.parse import ParseError
 
-from black.mode import TargetVersion, Feature, supports_feature
-from black.nodes import syms
+from .mode import TargetVersion, Feature, supports_feature
+from .nodes import syms
 
 ast3: Any
 ast27: Any

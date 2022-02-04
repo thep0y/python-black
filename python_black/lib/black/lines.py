@@ -13,16 +13,16 @@ from typing import (
     cast,
 )
 
-from blib2to3.pytree import Node, Leaf
-from blib2to3.pgen2 import token
+from ..blib2to3.pytree import Node, Leaf
+from ..blib2to3.pgen2 import token
 
-from black.brackets import BracketTracker, DOT_PRIORITY
-from black.mode import Mode
-from black.nodes import STANDALONE_COMMENT, TEST_DESCENDANTS
-from black.nodes import BRACKETS, OPENING_BRACKETS, CLOSING_BRACKETS
-from black.nodes import syms, whitespace, replace_child, child_towards
-from black.nodes import is_multiline_string, is_import, is_type_comment
-from black.nodes import is_one_tuple_between
+from .brackets import BracketTracker, DOT_PRIORITY
+from .mode import Mode
+from .nodes import STANDALONE_COMMENT, TEST_DESCENDANTS
+from .nodes import BRACKETS, OPENING_BRACKETS, CLOSING_BRACKETS
+from .nodes import syms, whitespace, replace_child, child_towards
+from .nodes import is_multiline_string, is_import, is_type_comment
+from .nodes import is_one_tuple_between
 
 # types
 T = TypeVar("T")

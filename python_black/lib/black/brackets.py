@@ -5,16 +5,16 @@ import sys
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 if sys.version_info < (3, 8):
-    from typing_extensions import Final
+    from ..typing_extensions import Final
 else:
     from typing import Final
 
-from blib2to3.pytree import Leaf, Node
-from blib2to3.pgen2 import token
+from ..blib2to3.pytree import Leaf, Node
+from ..blib2to3.pgen2 import token
 
-from black.nodes import syms, is_vararg, VARARGS_PARENTS, UNPACKING_PARENTS
-from black.nodes import BRACKET, OPENING_BRACKETS, CLOSING_BRACKETS
-from black.nodes import MATH_OPERATORS, COMPARATORS, LOGIC_OPERATORS
+from .nodes import syms, is_vararg, VARARGS_PARENTS, UNPACKING_PARENTS
+from .nodes import BRACKET, OPENING_BRACKETS, CLOSING_BRACKETS
+from .nodes import MATH_OPERATORS, COMPARATORS, LOGIC_OPERATORS
 
 # types
 LN = Union[Leaf, Node]

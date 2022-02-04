@@ -6,11 +6,11 @@ from pathlib import Path
 import tempfile
 from typing import Dict, Iterable, Set, Tuple
 
-from platformdirs import user_cache_dir
+from ..platformdirs import user_cache_dir
 
-from black.mode import Mode
+from .mode import Mode
 
-from _black_version import version as __version__
+from .._black_version import version as __version__
 
 
 # types

@@ -17,8 +17,8 @@ from typing import (
     Sequence,
     NoReturn,
 )
-from blib2to3.pgen2 import grammar
-from blib2to3.pgen2.tokenize import GoodTokenInfo
+from . import grammar
+from .tokenize import GoodTokenInfo
 import os
 
 
