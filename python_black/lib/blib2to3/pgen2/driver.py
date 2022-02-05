@@ -31,8 +31,6 @@ from typing import (
     Text,
     Iterator,
     Tuple,
-    TypeVar,
-    Generic,
     Union,
 )
 from contextlib import contextmanager

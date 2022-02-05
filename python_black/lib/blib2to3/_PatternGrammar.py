@@ -1,4 +1,4 @@
-# Copyright 2006 Google, Inc. All Rights Reserved.
+PATTERN_GRAMMAR="""# Copyright 2006 Google, Inc. All Rights Reserved.
 # Licensed to PSF under a Contributor Agreement.
 
 # A grammar to describe tree matching patterns.
@@ -26,3 +26,4 @@ NegatedUnit: 'not' (STRING | NAME [Details] | '(' Alternatives ')')
 Repeater: '*' | '+' | '{' NUMBER [',' NUMBER] '}'
 
 Details: '<' Alternatives '>'
+"""

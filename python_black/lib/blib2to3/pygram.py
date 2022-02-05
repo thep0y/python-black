@@ -6,13 +6,14 @@
 # Python imports
 import os
 
-from typing import Union
+from pathlib import Path
 
 # Local imports
-from .pgen2 import token
 from .pgen2 import driver
 
 from .pgen2.grammar import Grammar
+from ._Grammar import GRAMMAR
+from ._PatternGrammar import PATTERN_GRAMMAR
 
 # Moved into initialize because mypyc can't handle __file__ (XXX bug)
 # # The grammar file
@@ -160,7 +161,13 @@ python_symbols: _python_symbols
 pattern_symbols: _pattern_symbols
 
 
-def initialize(cache_dir: Union[str, "os.PathLike[str]", None] = None) -> None:
+def _create_new_files(path: str, content: str):
+    if not os.path.exists(path):
+        with open(path, "w") as f:
+            f.write(content)
+
+
+def initialize(cache_dir: Path) -> None:
     global python_grammar
     global python_grammar_no_print_statement
     global python_grammar_no_print_statement_no_exec_statement
@@ -171,10 +178,10 @@ def initialize(cache_dir: Union[str, "os.PathLike[str]", None] = None) -> None:
     global pattern_symbols
 
     # The grammar file
-    _GRAMMAR_FILE = os.path.join(os.path.dirname(__file__), "Grammar.txt")
-    _PATTERN_GRAMMAR_FILE = os.path.join(
-        os.path.dirname(__file__), "PatternGrammar.txt"
-    )
+    _GRAMMAR_FILE = os.path.join(cache_dir, "Grammar.txt")
+    _PATTERN_GRAMMAR_FILE = os.path.join(cache_dir, "PatternGrammar.txt")
+    _create_new_files(_GRAMMAR_FILE, GRAMMAR)
+    _create_new_files(_PATTERN_GRAMMAR_FILE, PATTERN_GRAMMAR)
 
     # Python 2
     python_grammar = driver.load_packaged_grammar("blib2to3", _GRAMMAR_FILE, cache_dir)

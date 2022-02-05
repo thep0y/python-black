@@ -1,12 +1,12 @@
-# Grammar for 2to3. This grammar supports Python 2.x and 3.x.
+GRAMMAR = """# Grammar for 2to3. This grammar supports Python 2.x and 3.x.
 
 # NOTE WELL: You should also follow all the steps listed at
 # https://devguide.python.org/grammar/
 
 # Start symbols for the grammar:
-#	file_input is a module or sequence of commands read from an input file;
-#	single_input is a single interactive statement;
-#	eval_input is the input for the eval() and input() functions.
+#      file_input is a module or sequence of commands read from an input file;
+#      single_input is a single interactive statement;
+#      eval_input is the input for the eval() and input() functions.
 # NB: compound_stmt in single_input is followed by extra NEWLINE!
 file_input: (NEWLINE | stmt)* ENDMARKER
 single_input: NEWLINE | simple_stmt | compound_stmt NEWLINE
@@ -112,9 +112,9 @@ while_stmt: 'while' namedexpr_test ':' suite ['else' ':' suite]
 for_stmt: 'for' exprlist 'in' testlist ':' suite ['else' ':' suite]
 try_stmt: ('try' ':' suite
            ((except_clause ':' suite)+
-	    ['else' ':' suite]
-	    ['finally' ':' suite] |
-	   'finally' ':' suite))
+           ['else' ':' suite]
+           ['finally' ':' suite] |
+          'finally' ':' suite))
 with_stmt: 'with' asexpr_test (',' asexpr_test)*  ':' suite
 
 # NB compile.c makes sure that the default except clause is last
@@ -171,7 +171,7 @@ testlist: test (',' test)* [',']
 dictsetmaker: ( ((test ':' asexpr_test | '**' expr)
                  (comp_for | (',' (test ':' asexpr_test | '**' expr))* [','])) |
                 ((test [':=' test] | star_expr)
-		 (comp_for | (',' (test [':=' test] | star_expr))* [','])) )
+               (comp_for | (',' (test [':=' test] | star_expr))* [','])) )
 
 classdef: 'class' NAME ['(' [arglist] ')'] ':' suite
 
@@ -188,7 +188,7 @@ argument: ( test [comp_for] |
             test ':=' test |
             test 'as' test |
             test '=' asexpr_test |
-	    '**' test |
+           '**' test |
             '*' test )
 
 comp_iter: comp_for | comp_if
@@ -249,3 +249,4 @@ case_block: "case" patterns [guard] ':' suite
 guard: 'if' namedexpr_test
 patterns: pattern (',' pattern)* [',']
 pattern: (expr|star_expr) ['as' expr]
+"""
