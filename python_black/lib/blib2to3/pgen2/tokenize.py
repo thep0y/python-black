@@ -39,12 +39,8 @@ from typing import (
     Pattern,
     Union,
     cast,
+    Final,
 )
-
-if sys.version_info >= (3, 8):
-    from typing import Final
-else:
-    from ...typing_extensions import Final
 
 from .token import *
 from .grammar import Grammar

@@ -2,12 +2,7 @@ import sys
 from dataclasses import dataclass
 from functools import lru_cache
 import re
-from typing import Iterator, List, Optional, Union
-
-if sys.version_info >= (3, 8):
-    from typing import Final
-else:
-    from ..typing_extensions import Final
+from typing import Iterator, List, Optional, Union, Final
 
 from ..blib2to3.pytree import Node, Leaf
 from ..blib2to3.pgen2 import token

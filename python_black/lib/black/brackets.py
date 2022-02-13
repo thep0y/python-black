@@ -4,10 +4,7 @@ from dataclasses import dataclass, field
 import sys
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 
-if sys.version_info < (3, 8):
-    from ..typing_extensions import Final
-else:
-    from typing import Final
+from typing import Final
 
 from ..blib2to3.pytree import Leaf, Node
 from ..blib2to3.pgen2 import token

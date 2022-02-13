@@ -20,13 +20,9 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
+    Literal,
+    Final,
 )
-import sys
-
-if sys.version_info < (3, 8):
-    from ..typing_extensions import Literal, Final
-else:
-    from typing import Literal, Final
 
 from ..mypy_extensions import trait
 

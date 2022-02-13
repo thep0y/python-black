@@ -6,10 +6,7 @@ import platform
 import sys
 from typing import Any, Iterable, Iterator, List, Set, Tuple, Type, Union
 
-if sys.version_info < (3, 8):
-    from ..typing_extensions import Final
-else:
-    from typing import Final
+from typing import Final
 
 # lib2to3 fork
 from ..blib2to3.pytree import Node, Leaf

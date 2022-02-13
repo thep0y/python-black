@@ -5,7 +5,6 @@ chosen by the user.
 """
 
 from hashlib import md5
-import sys
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
@@ -13,10 +12,7 @@ from operator import attrgetter
 from typing import Dict, Set
 from warnings import warn
 
-if sys.version_info < (3, 8):
-    from ..typing_extensions import Final
-else:
-    from typing import Final
+from typing import Final
 
 from .const import DEFAULT_LINE_LENGTH
 
