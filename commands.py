@@ -34,7 +34,8 @@ class BlackCommand(sublime_plugin.TextCommand):
 
     def run(self, edit: sublime.Edit):
         filename = self.view.file_name()
-        if filename and not filename.endswith(".py"):
+        python_syntax = "Python" in self.view.settings().get("syntax")
+        if (filename and not filename.endswith(".py")) and not python_syntax:
             sublime.status_message(
                 f"black: The current file is not a python script file: {filename}"
             )
