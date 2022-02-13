@@ -1,3 +1,18 @@
 [tool.black]
 line-length = 88
 target-version = ['py38']
+
+[tool.pyright]
+pythonVersion = '3.8'
+venv = 'sublime'
+extraPaths = [
+    # macOS
+    "/Applications/Sublime Text.app/Contents/MacOS/Lib/python38",
+    "/Users/thepoy/Library/Application Support/Sublime Text/Lib/python38",
+    # linux
+    "/opt/sublime_text/Lib/python38",
+    "/home/thepoy/.config/sublime-text/Lib/python38",
+    # windows
+    "C:\\Program Files\\Sublime Text\\Lib\\python38",
+    "C:\\Users\\thepoy\\AppData\\Roaming\\Sublime Text\\Lib\\python38"
+]
