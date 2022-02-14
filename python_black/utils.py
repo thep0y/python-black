@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: utils.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-02-04 13:06:04
+# @Modified:  2022-02-14 19:49:24
 
 import sublime
 import os
@@ -157,7 +157,7 @@ def replace_text(
             text = "\n".join(lines[:-1])
     view.replace(edit, region, text)
     restore_state(view, state)
-    sublime.status_message("black: formatted")
+    sublime.status_message("black: Formatted")
 
 
 def format_source_file(
@@ -201,7 +201,7 @@ def format_by_import_black_package(source: str, filepath: str) -> Optional[str]:
         # When formatting the selection, an error may be
         # reported due to indentation issues, but this is
         # a issue with `black` and I may fix it in the future.
-        sublime.status_message("python-black: format failed")
+        sublime.status_message("black: Format failed")
         return
     return formatted
 
@@ -215,7 +215,7 @@ def black_format(
     view: sublime.View,
     # preview: bool = False,
 ):
-    sublime.status_message("black: formatting...")
+    sublime.status_message("black: Formatting...")
 
     formatted = format_by_import_black_package(source, filepath)
 

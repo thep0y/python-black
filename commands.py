@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: commands.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-02-05 11:08:33
+# @Modified:  2022-02-14 19:50:20
 
 import sublime
 import sublime_plugin
@@ -34,11 +34,13 @@ class BlackCommand(sublime_plugin.TextCommand):
 
     def run(self, edit: sublime.Edit):
         filename = self.view.file_name()
-        if filename and not filename.endswith(".py"):
+
+        if self.view.settings().get("syntax").lower().find("python") == -1:
             sublime.status_message(
-                f"black: The current file is not a python script file: {filename}"
+                f"black: The current file is not a python script: {filename}"
             )
             return
+
         if not filename:
             sublime.error_message("black: Unrecognized file name")
             return

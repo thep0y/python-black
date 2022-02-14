@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: constants.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-02-04 10:52:58
+# @Modified:  2022-02-14 19:46:14
 
 PACKAGE_NAME = "python-black"
 INSTALLED_PACKAGE_NAME = f"{PACKAGE_NAME}.sublime-package"
