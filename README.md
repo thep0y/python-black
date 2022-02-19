@@ -58,7 +58,7 @@ You can quickly generate a black configuration file for the current project.
 | ----------------------------------------------- | ------------------------------------------------------------ |
 | `python-black: Create Black Configuration File` | Creates a `pyproject.toml` file in the root of the project with basic options. Opens the configuration file if it already exists. |
 
-> :warning: If you don't want to generate a `pyproject.toml` for *<u>each project</u>*, then you need to create a `black` global configuration file.
+> :warning: If you don't want to generate a `pyproject.toml` for *<u>**each project**</u>*, then you need to create a `black` global configuration file.
 >
 > Refer to [Black Documentation](https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html#where-black-looks-for-the-file).
 
