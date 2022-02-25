@@ -6,11 +6,28 @@
           "python-black.sublime-settings"
         ],
         "schema": {
+          "$id": "sublime://settings/python-black",
           "properties": {
             "format_on_save": {
               "type": "boolean",
               "default": true,
               "markdownDescription": "Whether to **automatically format** the entire document when saving."
+            }
+          }
+        }
+      },
+      {
+        "file_patterns": [
+          "/*.sublime-project"
+        ],
+        "schema": {
+          "properties": {
+            "settings": {
+              "properties": {
+                "python-black": {
+                  "$ref": "sublime://settings/python-black"
+                }
+              }
             }
           }
         }

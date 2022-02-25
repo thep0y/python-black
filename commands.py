@@ -4,14 +4,14 @@
 # @Email:     thepoy@163.com
 # @File Name: commands.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-02-14 19:50:20
+# @Modified:  2022-02-25 10:17:15
 
 import sublime
 import sublime_plugin
 
 
 from os import path
-from typing import List
+from typing import Dict, List
 
 from .python_black.constants import (
     SETTINGS_FILE_NAME,
@@ -108,10 +108,28 @@ class BlackCreateConfiguration(sublime_plugin.WindowCommand):
 
 
 class AutoFormatOnSave(sublime_plugin.EventListener):
-    def on_pre_save(self, view: sublime.View):
+    def format_on_save(self, view: sublime.View) -> bool:
         settings = sublime.load_settings(SETTINGS_FILE_NAME)
-        status = settings.get("format_on_save")
-        if status:
+        status: bool = settings.get("format_on_save")
+
+        window = view.window()
+        if not window:
+            return status
+
+        project_settings: Dict[str, Dict[str, bool]] = (
+            window.project_data() or {}
+        ).get("settings", {})
+
+        python_black_settings = project_settings.get("python-black")
+        if isinstance(python_black_settings, dict):
+            value = python_black_settings.get("format_on_save")
+            if isinstance(value, bool):
+                return value
+
+        return status
+
+    def on_pre_save(self, view: sublime.View):
+        if self.format_on_save(view):
             view.run_command("black")
             sublime.status_message("black: Document is automatically formatted")
 
