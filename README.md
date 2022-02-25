@@ -62,6 +62,19 @@ You can quickly generate a black configuration file for the current project.
 >
 > Refer to [Black Documentation](https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html#where-black-looks-for-the-file).
 
+>If you want to disable `format_on_save` in a project that does not use `black` code style [#14](https://github.com/thep0y/python-black/issues/14), you need to add the configuration to `*.sublime-project`:
+>````json
+>{
+>  ...
+>	"settings": {
+>    ...
+>		"python-black": {
+>			"format_on_save": false
+>		}
+>	}
+>}
+>````
+
 ### TODO
 
 - [ ] format all python files in the current project

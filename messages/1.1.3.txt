@@ -1,0 +1,5 @@
+=> 1.1.3
+
+# Features and Fixes
+
+- `format_on_save` can be set for each project (#14)

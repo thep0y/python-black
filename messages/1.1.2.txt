@@ -1,5 +1,0 @@
-=> 1.1.2
-
-# Features and Fixes
-
-- update the judgment condition for whether the current document is a python script

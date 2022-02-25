@@ -1,5 +1,0 @@
-=> 1.0.6
-
-# Features and Fixes
-
-- Fix the bug that an exception is thrown when reading a non-existent md5 file (#8)

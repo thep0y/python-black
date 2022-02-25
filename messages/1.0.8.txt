@@ -1,6 +1,0 @@
-=> 1.0.8
-
-# Features and Fixes
-
-- upgrade `black` to `22.1.0`
-- remove dependency on `regex`

@@ -1,5 +1,0 @@
-=> 1.1.1
-
-# Features and Fixes
-
-- fix the bug that the text file in the package cannot be read (#10)

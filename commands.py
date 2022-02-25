@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: commands.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-02-25 10:17:15
+# @Modified:  2022-02-25 10:37:06
 
 import sublime
 import sublime_plugin
@@ -120,11 +120,7 @@ class AutoFormatOnSave(sublime_plugin.EventListener):
             window.project_data() or {}
         ).get("settings", {})
 
-        python_black_settings = project_settings.get("python-black")
-        if isinstance(python_black_settings, dict):
-            value = python_black_settings.get("format_on_save")
-            if isinstance(value, bool):
-                return value
+        status = project_settings.get("python-black", {}).get("format_on_save", status)
 
         return status
 
