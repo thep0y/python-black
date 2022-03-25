@@ -55,6 +55,8 @@ There is only one modifiable property in settings:
 }
 ```
 
+This can also be toggled via `Preferences > Package Settings > Python Black > Format On Save`.
+
 #### 3 Create Black Configuration File
 
 You can quickly generate a black configuration file for the current project.

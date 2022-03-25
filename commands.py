@@ -15,6 +15,7 @@ from typing import Dict, List
 
 from .python_black.constants import (
     SETTINGS_FILE_NAME,
+    DEFAULT_FORMAT_ON_SAVE,
     CONFIGURATION_FILENAME,
     CONFIGURATION_CONTENTS,
 )
@@ -110,7 +111,7 @@ class BlackCreateConfiguration(sublime_plugin.WindowCommand):
 class AutoFormatOnSave(sublime_plugin.EventListener):
     def format_on_save(self, view: sublime.View) -> bool:
         settings = sublime.load_settings(SETTINGS_FILE_NAME)
-        status: bool = settings.get("format_on_save")
+        status: bool = settings.get("format_on_save", DEFAULT_FORMAT_ON_SAVE)
 
         window = view.window()
         if not window:
@@ -137,3 +138,18 @@ class BlackOutputCommand(sublime_plugin.TextCommand):
 
     def is_visible(self, *args):
         return False
+
+
+class ToggleFormatOnSaveCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        settings = sublime.load_settings(SETTINGS_FILE_NAME)
+        format_on_save = not settings.get("format_on_save", DEFAULT_FORMAT_ON_SAVE)
+        settings.set("format_on_save", format_on_save)
+        sublime.save_settings(SETTINGS_FILE_NAME)
+
+    def is_checked(self):
+        settings = sublime.load_settings(SETTINGS_FILE_NAME)
+        return bool(settings.get("format_on_save", DEFAULT_FORMAT_ON_SAVE))
+
+    def description(self):
+        return "Format On Save (Global)"
