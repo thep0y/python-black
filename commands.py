@@ -25,14 +25,14 @@ class BlackCommand(sublime_plugin.TextCommand):
     def is_visible(self, *args):
         return True
 
-    def get_selection(self):
+    def get_source(self, use_selection):
         region = self.view.sel()[0]
         # select the whole view if there is no selected region
-        if region.a == region.b:
+        if region.a == region.b or not use_selection:
             region = sublime.Region(0, self.view.size())
         return region, self.view.substr(region), self.view.encoding()
 
-    def run(self, edit: sublime.Edit):
+    def run(self, edit: sublime.Edit, use_selection=True):
         filename = self.view.file_name()
 
         if self.view.settings().get("syntax").lower().find("python") == -1:
@@ -45,7 +45,7 @@ class BlackCommand(sublime_plugin.TextCommand):
             sublime.error_message("black: Unrecognized file name")
             return
 
-        region, source, encoding = self.get_selection()
+        region, source, encoding = self.get_source(use_selection)
         if not isinstance(source, str) and hasattr(source, "decode"):
             source = source.decode(encoding)
         if filename:
@@ -126,7 +126,7 @@ class AutoFormatOnSave(sublime_plugin.EventListener):
 
     def on_pre_save(self, view: sublime.View):
         if self.format_on_save(view):
-            view.run_command("black")
+            view.run_command("black", {"use_selection": False})
             sublime.status_message("black: Document is automatically formatted")
 
 
