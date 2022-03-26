@@ -15,6 +15,7 @@ from typing import Dict, List
 
 from .python_black.constants import (
     SETTINGS_FILE_NAME,
+    DEFAULT_FORMAT_ON_SAVE,
     CONFIGURATION_FILENAME,
     CONFIGURATION_CONTENTS,
 )
@@ -25,14 +26,14 @@ class BlackCommand(sublime_plugin.TextCommand):
     def is_visible(self, *args):
         return True
 
-    def get_selection(self):
+    def get_source(self, use_selection):
         region = self.view.sel()[0]
         # select the whole view if there is no selected region
-        if region.a == region.b:
+        if region.a == region.b or not use_selection:
             region = sublime.Region(0, self.view.size())
         return region, self.view.substr(region), self.view.encoding()
 
-    def run(self, edit: sublime.Edit):
+    def run(self, edit: sublime.Edit, use_selection=True):
         filename = self.view.file_name()
 
         if self.view.settings().get("syntax").lower().find("python") == -1:
@@ -45,7 +46,7 @@ class BlackCommand(sublime_plugin.TextCommand):
             sublime.error_message("black: Unrecognized file name")
             return
 
-        region, source, encoding = self.get_selection()
+        region, source, encoding = self.get_source(use_selection)
         if not isinstance(source, str) and hasattr(source, "decode"):
             source = source.decode(encoding)
         if filename:
@@ -110,7 +111,7 @@ class BlackCreateConfiguration(sublime_plugin.WindowCommand):
 class AutoFormatOnSave(sublime_plugin.EventListener):
     def format_on_save(self, view: sublime.View) -> bool:
         settings = sublime.load_settings(SETTINGS_FILE_NAME)
-        status: bool = settings.get("format_on_save")
+        status: bool = settings.get("format_on_save", DEFAULT_FORMAT_ON_SAVE)
 
         window = view.window()
         if not window:
@@ -126,7 +127,7 @@ class AutoFormatOnSave(sublime_plugin.EventListener):
 
     def on_pre_save(self, view: sublime.View):
         if self.format_on_save(view):
-            view.run_command("black")
+            view.run_command("black", {"use_selection": False})
             sublime.status_message("black: Document is automatically formatted")
 
 
@@ -137,3 +138,18 @@ class BlackOutputCommand(sublime_plugin.TextCommand):
 
     def is_visible(self, *args):
         return False
+
+
+class ToggleFormatOnSaveCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        settings = sublime.load_settings(SETTINGS_FILE_NAME)
+        format_on_save = not settings.get("format_on_save", DEFAULT_FORMAT_ON_SAVE)
+        settings.set("format_on_save", format_on_save)
+        sublime.save_settings(SETTINGS_FILE_NAME)
+
+    def is_checked(self):
+        settings = sublime.load_settings(SETTINGS_FILE_NAME)
+        return bool(settings.get("format_on_save", DEFAULT_FORMAT_ON_SAVE))
+
+    def description(self):
+        return "Format On Save (Global)"

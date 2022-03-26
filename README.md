@@ -33,9 +33,14 @@ You can create custom key binding based on sample`Preferences - Package Settings
      "keys": [
          "ctrl+super+l"
      ],
-     "command": "black"
+     "command": "black",
+     "args": {
+        "use_selection": true
+     }
 }
 ```
+
+The optional `use_selection` boolean (defaults to `true`) controls whether to format the selected region, or the entire file.
 
 > :warning:Note: Do not **duplicate** the key binding of other packages
 
@@ -49,6 +54,8 @@ There is only one modifiable property in settings:
    "format_on_save": true
 }
 ```
+
+This can also be toggled via `Preferences > Package Settings > Python Black > Format On Save`.
 
 #### 3 Create Black Configuration File
 

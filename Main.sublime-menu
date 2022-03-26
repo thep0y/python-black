@@ -11,6 +11,9 @@
                         "caption": "Python Black",
                         "children": [
                             {
+                                "command": "toggle_format_on_save",
+                            },
+                            {
                                 "caption": "Settings",
                                 "command": "edit_settings",
                                 "args": {
