@@ -34,7 +34,7 @@ class BlackCommand(sublime_plugin.TextCommand):
         return region, self.view.substr(region), self.view.encoding()
 
     def run(self, edit: sublime.Edit, use_selection=True):
-        filename = self.view.file_name()
+        filename = self.view.file_name() or ""
 
         if self.view.settings().get("syntax").lower().find("python") == -1:
             sublime.status_message(
@@ -42,22 +42,18 @@ class BlackCommand(sublime_plugin.TextCommand):
             )
             return
 
-        if not filename:
-            sublime.error_message("black: Unrecognized file name")
-            return
-
         region, source, encoding = self.get_source(use_selection)
         if not isinstance(source, str) and hasattr(source, "decode"):
             source = source.decode(encoding)
-        if filename:
-            black_format(
-                source=source,
-                filepath=filename,
-                region=region,
-                encoding=encoding,
-                edit=edit,
-                view=self.view,
-            )
+
+        black_format(
+            source=source,
+            filepath=filename,
+            region=region,
+            encoding=encoding,
+            edit=edit,
+            view=self.view,
+        )
 
 
 class BlackAllFilesCommand(sublime_plugin.TextCommand):
