@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: black.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-02-05 20:15:40
+# @Modified:  2022-07-02 15:11:15
 
 import sublime
 import os
@@ -71,6 +71,10 @@ def read_pyproject_toml(
 
     if not config:
         return default_config, None
+
+    config = {
+        k: str(v) if not isinstance(v, (list, dict)) else v for k, v in config.items()
+    }
 
     target_version = config.get("target_version")
     if target_version is not None and not isinstance(target_version, list):

@@ -416,7 +416,7 @@ class Leaf(Base):
         self.value = value
         if prefix is not None:
             self._prefix = prefix
-        self.fixers_applied: Optional[List[Any]] = fixers_applied[:]
+        self.fixers_applied: List[Any] = fixers_applied[:]
         self.children = []
         self.opening_bracket = opening_bracket
 

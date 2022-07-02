@@ -45,7 +45,9 @@ def find_project_root(srcs: Sequence[str]) -> Tuple[Path, str]:
 
     # A list of lists of parents for each 'src'. 'src' is included as a
     # "parent" of itself if it is a directory
-    src_parents = [list(path.parents) + ([path] if path.is_dir() else []) for path in path_srcs]
+    src_parents = [
+        list(path.parents) + ([path] if path.is_dir() else []) for path in path_srcs
+    ]
 
     common_base = max(
         set.intersection(*(set(parents) for parents in src_parents)),
@@ -74,7 +76,11 @@ def find_pyproject_toml(path_search_start: Tuple[str, ...]) -> Optional[str]:
 
     try:
         path_user_pyproject_toml = find_user_pyproject_toml()
-        return str(path_user_pyproject_toml) if path_user_pyproject_toml.is_file() else None
+        return (
+            str(path_user_pyproject_toml)
+            if path_user_pyproject_toml.is_file()
+            else None
+        )
     except PermissionError as e:
         # We do not have access to the user-level config directory, so ignore it.
         err(f"Ignoring user configuration directory due to {e!r}")
@@ -99,6 +105,10 @@ def find_user_pyproject_toml() -> Path:
 
     This looks for ~\.black on Windows and ~/.config/black on Linux and other
     Unix systems.
+
+    May raise:
+    - RuntimeError: if the current user has no homedir
+    - PermissionError: if the current process cannot access the user's homedir
     """
     if sys.platform == "win32":
         # Windows
@@ -135,21 +145,22 @@ def normalize_path_maybe_ignore(
     """
     try:
         abspath = path if path.is_absolute() else Path.cwd() / path
-        normalized_path = abspath.resolve().relative_to(root).as_posix()
+        normalized_path = abspath.resolve()
+        try:
+            root_relative_path = normalized_path.relative_to(root).as_posix()
+        except ValueError:
+            if report:
+                report.path_ignored(
+                    path, f"is a symbolic link that points outside {root}"
+                )
+            return None
+
     except OSError as e:
         if report:
             report.path_ignored(path, f"cannot be read because {e}")
         return None
 
-    except ValueError:
-        if path.is_symlink():
-            if report:
-                report.path_ignored(path, f"is a symbolic link that points outside {root}")
-            return None
-
-        raise
-
-    return normalized_path
+    return root_relative_path
 
 
 def path_is_excluded(
@@ -202,7 +213,9 @@ def gen_python_files(
             continue
 
         if path_is_excluded(normalized_path, extend_exclude):
-            report.path_ignored(child, "matches the --extend-exclude regular expression")
+            report.path_ignored(
+                child, "matches the --extend-exclude regular expression"
+            )
             continue
 
         if path_is_excluded(normalized_path, force_exclude):

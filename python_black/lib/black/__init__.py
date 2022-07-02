@@ -70,33 +70,16 @@ def format_str(src_contents: str, *, mode: Mode) -> FileContent:
     return dst_contents
 
 
-def decode_bytes(src: bytes) -> Tuple[FileContent, Encoding, NewLine]:
-    """Return a tuple of (decoded_contents, encoding, newline).
-
-    `newline` is either CRLF or LF but `decoded_contents` is decoded with
-    universal newlines (i.e. only contains LF).
-    """
-    srcbuf = io.BytesIO(src)
-    encoding, lines = tokenize.detect_encoding(srcbuf.readline)
-    if not lines:
-        return "", encoding, "\n"
-
-    newline = "\r\n" if b"\r\n" == lines[0][-2:] else "\n"
-    srcbuf.seek(0)
-    with io.TextIOWrapper(srcbuf, encoding) as tiow:
-        return tiow.read(), encoding, newline
-
-
 def _format_str_once(src_contents: str, *, mode: Mode) -> str:
     src_node = lib2to3_parse(src_contents.lstrip(), mode.target_versions)
     dst_contents = []
-    future_imports = get_future_imports(src_node)
     if mode.target_versions:
         versions = mode.target_versions
     else:
+        future_imports = get_future_imports(src_node)
         versions = detect_target_versions(src_node, future_imports=future_imports)
 
-    normalize_fmt_off(src_node)
+    normalize_fmt_off(src_node, preview=mode.preview)
     lines = LineGenerator(mode=mode)
     elt = EmptyLineTracker(is_pyi=mode.is_pyi)
     empty_line = Line(mode=mode)
@@ -115,6 +98,23 @@ def _format_str_once(src_contents: str, *, mode: Mode) -> str:
         ):
             dst_contents.append(str(line))
     return "".join(dst_contents)
+
+
+def decode_bytes(src: bytes) -> Tuple[FileContent, Encoding, NewLine]:
+    """Return a tuple of (decoded_contents, encoding, newline).
+
+    `newline` is either CRLF or LF but `decoded_contents` is decoded with
+    universal newlines (i.e. only contains LF).
+    """
+    srcbuf = io.BytesIO(src)
+    encoding, lines = tokenize.detect_encoding(srcbuf.readline)
+    if not lines:
+        return "", encoding, "\n"
+
+    newline = "\r\n" if b"\r\n" == lines[0][-2:] else "\n"
+    srcbuf.seek(0)
+    with io.TextIOWrapper(srcbuf, encoding) as tiow:
+        return tiow.read(), encoding, newline
 
 
 def get_features_used(
@@ -146,8 +146,7 @@ def get_features_used(
             if value_head in {'f"', 'F"', "f'", "F'", "rf", "fr", "RF", "FR"}:
                 features.add(Feature.F_STRINGS)
 
-        elif n.type == token.NUMBER:
-            assert isinstance(n, Leaf)
+        elif is_number_token(n):
             if "_" in n.value:
                 features.add(Feature.NUMERIC_UNDERSCORES)
 
@@ -201,6 +200,24 @@ def get_features_used(
             and n.children[3].type == syms.testlist_star_expr
         ):
             features.add(Feature.ANN_ASSIGN_EXTENDED_RHS)
+        elif (
+            n.type == syms.except_clause
+            and len(n.children) >= 2
+            and n.children[1].type == token.STAR
+        ):
+            features.add(Feature.EXCEPT_STAR)
+
+        elif n.type in {syms.subscriptlist, syms.trailer} and any(
+            child.type == syms.star_expr for child in n.children
+        ):
+            features.add(Feature.VARIADIC_GENERICS)
+
+        elif (
+            n.type == syms.tname_star
+            and len(n.children) == 3
+            and n.children[2].type == syms.star_expr
+        ):
+            features.add(Feature.VARIADIC_GENERICS)
 
     return features
 

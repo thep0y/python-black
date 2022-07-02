@@ -4,36 +4,31 @@ usage.
 """
 from __future__ import annotations
 
-import importlib
 import os
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-
 if TYPE_CHECKING:
-    from ..typing_extensions import Literal  # pragma: no cover
+    from typing_extensions import Literal  # pragma: no cover
 
 from .api import PlatformDirsABC
 
 
 def _set_platform_dir_class() -> type[PlatformDirsABC]:
     if sys.platform == "win32":
-        module, name = ".windows", "Windows"
-        from .windows import Windows
-
-        result = Windows
+        from .windows import Windows as Result
     elif sys.platform == "darwin":
-        module, name = ".macos", "MacOS"
-        from .macos import MacOS
-
-        result = MacOS
+        from .macos import MacOS as Result
     else:
-        module, name = ".unix", "Unix"
-        from .unix import Unix
+        from .unix import Unix as Result
 
-        result = Unix
-    return result
+    if os.getenv("ANDROID_DATA") == "/data" and os.getenv("ANDROID_ROOT") == "/system":
+
+        if os.getenv("SHELL") is not None:
+            return Result
+
+    return Result
 
 
 PlatformDirs = _set_platform_dir_class()  #: Currently active platform

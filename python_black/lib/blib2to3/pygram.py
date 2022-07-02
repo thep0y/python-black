@@ -5,8 +5,10 @@
 
 # Python imports
 import os
+import hashlib
 
 from pathlib import Path
+from typing import Tuple
 
 # Local imports
 from .pgen2 import driver
@@ -124,6 +126,7 @@ class _python_symbols(Symbols):
     tfpdef: int
     tfplist: int
     tname: int
+    tname_star: int
     trailer: int
     try_stmt: int
     typedargslist: int
@@ -161,10 +164,22 @@ python_symbols: _python_symbols
 pattern_symbols: _pattern_symbols
 
 
-def _create_new_files(path: str, content: str):
-    if not os.path.exists(path):
-        with open(path, "w") as f:
-            f.write(content)
+File = Tuple[str, str]
+
+
+def _create_new_files(*files: File):
+    for file in files:
+        if os.path.exists(file[0]):
+            with open(file[0], "r") as f:
+                content = f.read()
+
+            if content.strip() != file[1].strip():
+                os.remove(file[0])
+
+        if not os.path.exists(file[0]):
+
+            with open(file[0], "w") as f:
+                f.write(file[1])
 
 
 def initialize(cache_dir: Path) -> None:
@@ -180,8 +195,10 @@ def initialize(cache_dir: Path) -> None:
     # The grammar file
     _GRAMMAR_FILE = os.path.join(cache_dir, "Grammar.txt")
     _PATTERN_GRAMMAR_FILE = os.path.join(cache_dir, "PatternGrammar.txt")
-    _create_new_files(_GRAMMAR_FILE, GRAMMAR)
-    _create_new_files(_PATTERN_GRAMMAR_FILE, PATTERN_GRAMMAR)
+    _create_new_files(
+        (_GRAMMAR_FILE, GRAMMAR),
+        (_PATTERN_GRAMMAR_FILE, PATTERN_GRAMMAR),
+    )
 
     # Python 2
     python_grammar = driver.load_packaged_grammar("blib2to3", _GRAMMAR_FILE, cache_dir)

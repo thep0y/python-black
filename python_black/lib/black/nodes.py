@@ -8,6 +8,7 @@ from typing import (
     List,
     Optional,
     Set,
+    Tuple,
     TypeVar,
     Union,
     Final,
@@ -111,6 +112,7 @@ TEST_DESCENDANTS: Final = {
     syms.term,
     syms.power,
 }
+TYPED_NAMES: Final = {syms.tname, syms.tname_star}
 ASSIGNMENTS: Final = {
     "=",
     "+=",
@@ -234,6 +236,14 @@ def whitespace(leaf: Leaf, *, complex_subscript: bool) -> str:  # noqa: C901
                     # that, too.
                     return prevp.prefix
 
+        elif (
+            prevp.type == token.STAR
+            and parent_type(prevp) == syms.star_expr
+            and parent_type(prevp.parent) == syms.subscriptlist
+        ):
+            # No space between typevar tuples.
+            return NO
+
         elif prevp.type in VARARGS_SPECIALS:
             if is_vararg(prevp, within=VARARGS_PARENTS | UNPACKING_PARENTS):
                 return NO
@@ -272,7 +282,7 @@ def whitespace(leaf: Leaf, *, complex_subscript: bool) -> str:  # noqa: C901
             return NO
 
         if t == token.EQUAL:
-            if prev.type != syms.tname:
+            if prev.type not in TYPED_NAMES:
                 return NO
 
         elif prev.type == token.EQUAL:
@@ -283,7 +293,7 @@ def whitespace(leaf: Leaf, *, complex_subscript: bool) -> str:  # noqa: C901
         elif prev.type != token.COMMA:
             return NO
 
-    elif p.type == syms.tname:
+    elif p.type in TYPED_NAMES:
         # type names
         if not prev:
             prevp = preceding_leaf(p)
@@ -391,6 +401,10 @@ def whitespace(leaf: Leaf, *, complex_subscript: bool) -> str:  # noqa: C901
 
     elif p.type == syms.sliceop:
         return NO
+
+    elif p.type == syms.except_clause:
+        if t == token.STAR:
+            return NO
 
     return SPACE
 
@@ -551,9 +565,14 @@ def is_one_tuple(node: LN) -> bool:
     )
 
 
-def is_one_tuple_between(opening: Leaf, closing: Leaf, leaves: List[Leaf]) -> bool:
-    """Return True if content between `opening` and `closing` looks like a one-tuple."""
-    if opening.type != token.LPAR and closing.type != token.RPAR:
+def is_one_sequence_between(
+    opening: Leaf,
+    closing: Leaf,
+    leaves: List[Leaf],
+    brackets: Tuple[int, int] = (token.LPAR, token.RPAR),
+) -> bool:
+    """Return True if content between `opening` and `closing` is a one-sequence."""
+    if (opening.type, closing.type) != brackets:
         return False
 
     depth = closing.bracket_depth + 1
@@ -827,3 +846,7 @@ def is_rpar_token(nl: NL) -> TypeGuard[Leaf]:
 
 def is_string_token(nl: NL) -> TypeGuard[Leaf]:
     return nl.type == token.STRING
+
+
+def is_number_token(nl: NL) -> TypeGuard[Leaf]:
+    return nl.type == token.NUMBER

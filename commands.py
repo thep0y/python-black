@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: commands.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-02-25 10:37:06
+# @Modified:  2022-07-02 15:12:54
 
 import sublime
 import sublime_plugin
@@ -26,7 +26,7 @@ class BlackCommand(sublime_plugin.TextCommand):
     def is_visible(self, *args):
         return True
 
-    def get_source(self, use_selection):
+    def get_source(self, use_selection: bool):
         region = self.view.sel()[0]
         # select the whole view if there is no selected region
         if region.a == region.b or not use_selection:
@@ -47,6 +47,7 @@ class BlackCommand(sublime_plugin.TextCommand):
             return
 
         region, source, encoding = self.get_source(use_selection)
+
         if not isinstance(source, str) and hasattr(source, "decode"):
             source = source.decode(encoding)
         if filename:
