@@ -4,7 +4,13 @@ import tokenize
 from typing import Generator, Iterator, List, Set, Tuple, Optional
 
 
-from .nodes import STARS, syms, is_simple_decorator_expression, is_string_token
+from .nodes import (
+    STARS,
+    syms,
+    is_simple_decorator_expression,
+    is_string_token,
+    is_number_token,
+)
 from .lines import Line, EmptyLineTracker
 from .linegen import transform_line, LineGenerator, LN
 from .comments import normalize_fmt_off
