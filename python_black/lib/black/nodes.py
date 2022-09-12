@@ -150,12 +150,10 @@ class Visitor(Generic[T]):
 
     def visit(self, node: LN) -> Iterator[T]:
         """Main method to visit `node` and its children.
-
         It tries to find a `visit_*()` method for the given `node.type`, like
         `visit_simple_stmt` for Node objects or `visit_INDENT` for Leaf objects.
         If no dedicated `visit_*()` method is found, chooses `visit_default()`
         instead.
-
         Then yields objects of type `T` from the selected visitor.
         """
         if node.type < 256:
@@ -181,7 +179,6 @@ class Visitor(Generic[T]):
 
 def whitespace(leaf: Leaf, *, complex_subscript: bool) -> str:  # noqa: C901
     """Return whitespace prefix if needed for the given `leaf`.
-
     `complex_subscript` signals whether the given leaf is part of a subscription
     which has non-trivial arguments, like arithmetic expressions or function calls.
     """
@@ -483,7 +480,6 @@ def replace_child(old_child: LN, new_child: LN) -> None:
 
 def container_of(leaf: Leaf) -> LN:
     """Return `leaf` or one of its ancestors that is the topmost container of it.
-
     By "container" we mean a node where `leaf` is the very first child.
     """
     same_prefix = leaf.prefix
@@ -636,10 +632,8 @@ def is_simple_decorator_trailer(node: LN, last: bool = False) -> bool:
 
 def is_simple_decorator_expression(node: LN) -> bool:
     """Return True iff `node` could be a 'dotted name' decorator
-
     This function takes the node of the 'namedexpr_test' of the new decorator
     grammar and test if it would be valid under the old decorator grammar.
-
     The old grammar was: decorator: @ dotted_name [arguments] NEWLINE
     The new grammar is : decorator: @ namedexpr_test NEWLINE
     """
@@ -681,7 +675,6 @@ def is_yield(node: LN) -> bool:
 
 def is_vararg(leaf: Leaf, within: Set[NodeType]) -> bool:
     """Return True if `leaf` is a star or double star in a vararg or kwarg.
-
     If `within` includes VARARGS_PARENTS, this applies to function signatures.
     If `within` includes UNPACKING_PARENTS, it applies to right hand-side
     extended iterable unpacking (PEP 3132) and additional unpacking
@@ -790,10 +783,8 @@ def is_type_comment(leaf: Leaf, suffix: str = "") -> bool:
 
 def wrap_in_parentheses(parent: Node, child: LN, *, visible: bool = True) -> None:
     """Wrap `child` in parentheses.
-
     This replaces `child` with an atom holding the parentheses and the old
     child.  That requires moving the prefix.
-
     If `visible` is False, the leaves will be valueless (and thus invisible).
     """
     lpar = Leaf(token.LPAR, "(" if visible else "")
@@ -808,7 +799,6 @@ def wrap_in_parentheses(parent: Node, child: LN, *, visible: bool = True) -> Non
 
 def unwrap_singleton_parenthesis(node: LN) -> Optional[LN]:
     """Returns `wrapped` if `node` is of the shape ( wrapped ).
-
     Parenthesis can be optional. Returns None otherwise"""
     if len(node.children) != 3:
         return None
@@ -822,7 +812,6 @@ def unwrap_singleton_parenthesis(node: LN) -> Optional[LN]:
 
 def ensure_visible(leaf: Leaf) -> None:
     """Make sure parentheses are visible.
-
     They could be invisible as part of some statements (see
     :func:`normalize_invisible_parens` and :func:`visit_import_from`).
     """

@@ -26,14 +26,15 @@ def diff(a: str, b: str, a_name: str, b_name: str) -> str:
     """Return a unified diff string between strings `a` and `b`."""
     import difflib
 
-    a_lines = [line for line in a.splitlines(keepends=True)]
-    b_lines = [line for line in b.splitlines(keepends=True)]
+    a_lines = a.splitlines(keepends=True)
+    b_lines = b.splitlines(keepends=True)
     diff_lines = []
     for line in difflib.unified_diff(
         a_lines, b_lines, fromfile=a_name, tofile=b_name, n=5
     ):
         # Work around https://bugs.python.org/issue2142
-        # See https://www.gnu.org/software/diffutils/manual/html_node/Incomplete-Lines.html
+        # See:
+        # https://www.gnu.org/software/diffutils/manual/html_node/Incomplete-Lines.html
         if line[-1] == "\n":
             diff_lines.append(line)
         else:
@@ -47,7 +48,7 @@ def color_diff(contents: str) -> str:
     lines = contents.split("\n")
     for i, line in enumerate(lines):
         if line.startswith("+++") or line.startswith("---"):
-            line = "\033[1;37m" + line + "\033[0m"  # bold white, reset
+            line = "\033[1m" + line + "\033[0m"  # bold, reset
         elif line.startswith("@@"):
             line = "\033[36m" + line + "\033[0m"  # cyan, reset
         elif line.startswith("+"):

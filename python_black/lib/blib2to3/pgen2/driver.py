@@ -261,14 +261,13 @@ def load_grammar(
         logger = logging.getLogger(__name__)
     gp = _generate_pickle_name(gt) if gp is None else gp
     if force or not _newer(gp, gt):
-        logger.info("Generating grammar tables from %s", gt)
         g: grammar.Grammar = pgen.generate_grammar(gt)
         if save:
-            logger.info("Writing grammar tables to %s", gp)
             try:
                 g.dump(gp)
-            except OSError as e:
-                logger.info("Writing failed: %s", e)
+            except OSError:
+                # Ignore error, caching is not vital.
+                pass
     else:
         g = grammar.Grammar()
         g.load(gp)
@@ -291,11 +290,9 @@ def load_packaged_grammar(
         pkgutil.get_data(package, pickled_grammar)
     where *pickled_grammar* is computed from *grammar_source* by adding the
     Python version and using a ``.pickle`` extension.
-
     However, if *grammar_source* is an extant file, load_grammar(grammar_source)
     is called instead. This facilitates using a packaged grammar file when needed
     but preserves load_grammar's automatic regeneration behavior when possible.
-
     """
     if os.path.isfile(grammar_source):
         gp = _generate_pickle_name(grammar_source, cache_dir) if cache_dir else None
@@ -310,7 +307,6 @@ def load_packaged_grammar(
 
 def main(*args: Text) -> bool:
     """Main program, when run as a script: produce grammar pickle files.
-
     Calls load_grammar for each argument, a path to a grammar text file.
     """
     if not args:

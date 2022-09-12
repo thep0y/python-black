@@ -1,8 +1,8 @@
-from functools import lru_cache
+import sys
 import io
 import os
 from pathlib import Path
-import sys
+from functools import lru_cache
 from typing import (
     Any,
     Dict,
@@ -14,6 +14,8 @@ from typing import (
     Sequence,
     Tuple,
 )
+from .. import tomli as tomllib
+
 
 from ..mypy_extensions import mypyc_attr
 from ..pathspec import PathSpec
@@ -25,19 +27,20 @@ from .report import Report
 
 
 @lru_cache()
-def find_project_root(srcs: Sequence[str]) -> Tuple[Path, str]:
+def find_project_root(
+    srcs: Sequence[str], stdin_filename: Optional[str] = None
+) -> Tuple[Path, str]:
     """Return a directory containing .git, .hg, or pyproject.toml.
-
     That directory will be a common parent of all files and directories
     passed in `srcs`.
-
     If no directory in the tree contains a marker that would specify it's the
     project root, the root of the file system is returned.
-
     Returns a two-tuple with the first element as the project root path and
     the second element as a string describing the method by which the
     project root was discovered.
     """
+    if stdin_filename is not None:
+        srcs = tuple(stdin_filename if s == "-" else s for s in srcs)
     if not srcs:
         srcs = [str(Path.cwd().resolve())]
 
@@ -81,7 +84,7 @@ def find_pyproject_toml(path_search_start: Tuple[str, ...]) -> Optional[str]:
             if path_user_pyproject_toml.is_file()
             else None
         )
-    except PermissionError as e:
+    except (PermissionError, RuntimeError) as e:
         # We do not have access to the user-level config directory, so ignore it.
         err(f"Ignoring user configuration directory due to {e!r}")
         return None
@@ -90,11 +93,10 @@ def find_pyproject_toml(path_search_start: Tuple[str, ...]) -> Optional[str]:
 @mypyc_attr(patchable=True)
 def parse_pyproject_toml(path_config: str) -> Dict[str, Any]:
     """Parse a pyproject toml file, pulling out relevant parts for Black
-
-    If parsing fails, will raise a tomli.TOMLDecodeError
+    If parsing fails, will raise a tomllib.TOMLDecodeError
     """
     with open(path_config, "rb") as f:
-        pyproject_toml = load_toml(f)
+        pyproject_toml = tomllib.load(f)
     config = pyproject_toml.get("tool", {}).get("black", {})
     return {k.replace("--", "").replace("-", "_"): v for k, v in config.items()}
 
@@ -102,10 +104,8 @@ def parse_pyproject_toml(path_config: str) -> Dict[str, Any]:
 @lru_cache()
 def find_user_pyproject_toml() -> Path:
     r"""Return the path to the top-level user configuration for black.
-
     This looks for ~\.black on Windows and ~/.config/black on Linux and other
     Unix systems.
-
     May raise:
     - RuntimeError: if the current user has no homedir
     - PermissionError: if the current process cannot access the user's homedir
@@ -140,7 +140,6 @@ def normalize_path_maybe_ignore(
     report: Optional[Report] = None,
 ) -> Optional[str]:
     """Normalize `path`. May return `None` if `path` was ignored.
-
     `report` is where "path ignored" output goes.
     """
     try:
@@ -187,9 +186,7 @@ def gen_python_files(
     """Generate all files under `path` whose paths are not excluded by the
     `exclude_regex`, `extend_exclude`, or `force_exclude` regexes,
     but are included by the `include` regex.
-
     Symbolic links pointing outside of the `root` directory are ignored.
-
     `report` is where output about exclusions goes.
     """
     assert root.is_absolute(), f"INTERNAL ERROR: `root` must be absolute but is {root}"

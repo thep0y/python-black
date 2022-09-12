@@ -46,12 +46,10 @@ class Line:
 
     def append(self, leaf: Leaf, preformatted: bool = False) -> None:
         """Add a new `leaf` to the end of the line.
-
         Unless `preformatted` is True, the `leaf` will receive a new consistent
         whitespace prefix and metadata applied by :class:`BracketTracker`.
         Trailing commas are maybe removed, unpacked for loop variables are
         demoted from being delimiters.
-
         Inline comments are put aside.
         """
         has_value = leaf.type in BRACKETS or bool(leaf.value.strip())
@@ -78,7 +76,6 @@ class Line:
 
     def append_safe(self, leaf: Leaf, preformatted: bool = False) -> None:
         """Like :func:`append()` but disallow invalid standalone comment structure.
-
         Raises ValueError when any `leaf` is appended after a standalone comment
         or when a standalone comment is not the first leaf on the line.
         """
@@ -146,7 +143,6 @@ class Line:
     @property
     def is_class_paren_empty(self) -> bool:
         """Is this a class with no base classes but using parentheses?
-
         Those are unnecessary and should be removed.
         """
         return (
@@ -264,6 +260,8 @@ class Line:
         - it's not a single-element subscript
         Additionally, if ensure_removable:
         - it's not from square bracket indexing
+        (specifically, single-element square bracket indexing with
+        Preview.skip_magic_trailing_comma_in_subscript)
         """
         if not (
             closing.type in CLOSING_BRACKETS
@@ -292,8 +290,22 @@ class Line:
 
             if not ensure_removable:
                 return True
+
             comma = self.leaves[-1]
-            return bool(comma.parent and comma.parent.type == syms.listmaker)
+            if comma.parent is None:
+                return False
+            if Preview.skip_magic_trailing_comma_in_subscript in self.mode:
+                return (
+                    comma.parent.type != syms.subscriptlist
+                    or closing.opening_bracket is None
+                    or not is_one_sequence_between(
+                        closing.opening_bracket,
+                        closing,
+                        self.leaves,
+                        brackets=(token.LSQB, token.RSQB),
+                    )
+                )
+            return comma.parent.type == syms.listmaker
 
         if self.is_import:
             return True
@@ -376,7 +388,6 @@ class Line:
         self, reversed: bool = False
     ) -> Iterator[Tuple[Index, Leaf, int]]:
         """Return an enumeration of leaves with their length.
-
         Stops prematurely on multiline strings and standalone comments.
         """
         op = cast(
@@ -427,7 +438,6 @@ class Line:
 class EmptyLineTracker:
     """Provides a stateful method that returns the number of potential extra
     empty lines needed before and after the currently processed line.
-
     Note: this tracker works on lines that haven't been split yet.  It assumes
     the prefix of the first leaf consists of optional newlines.  Those newlines
     are consumed by `maybe_empty_lines()` and included in the computation.
@@ -440,7 +450,6 @@ class EmptyLineTracker:
 
     def maybe_empty_lines(self, current_line: Line) -> Tuple[int, int]:
         """Return the number of extra empty lines before and after the `current_line`.
-
         This is for separating `def`, `async def` and `class` with extra empty
         lines (two on module-level).
         """
@@ -601,12 +610,10 @@ def append_leaves(
     """
     Append leaves (taken from @old_line) to @new_line, making sure to fix the
     underlying Node structure where appropriate.
-
     All of the leaves in @leaves are duplicated. The duplicates are then
     appended to @new_line and used to replace their originals in the underlying
     Node structure. Any comments attached to the old leaves are reattached to
     the new leaves.
-
     Pre-conditions:
         set(@leaves) is a subset of set(@old_line.leaves).
     """
@@ -621,7 +628,6 @@ def append_leaves(
 
 def is_line_short_enough(line: Line, *, line_length: int, line_str: str = "") -> bool:
     """Return True if `line` is no longer than `line_length`.
-
     Uses the provided `line_str` rendering, if any, otherwise computes a new one.
     """
     if not line_str:
@@ -635,7 +641,6 @@ def is_line_short_enough(line: Line, *, line_length: int, line_str: str = "") ->
 
 def can_be_split(line: Line) -> bool:
     """Return False if the line cannot be split *for sure*.
-
     This is not an exhaustive search but a cheap heuristic that we can use to
     avoid some unfortunate formattings (mostly around wrapping unsplittable code
     in unnecessary parentheses).
@@ -674,7 +679,6 @@ def can_omit_invisible_parens(
     line_length: int,
 ) -> bool:
     """Does `line` have a shape safe to reformat without optional parens around it?
-
     Returns True for only a subset of potentially nice looking formattings but
     the point is to not return false positives that end up producing lines that
     are too long.
@@ -780,7 +784,6 @@ def _can_omit_closing_paren(line: Line, *, last: Leaf, line_length: int) -> bool
 
 def line_to_string(line: Line) -> str:
     """Returns the string representation of @line.
-
     WARNING: This is known to be computationally expensive.
     """
     return str(line).strip("\n")

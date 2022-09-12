@@ -46,6 +46,7 @@ class Feature(Enum):
     ANN_ASSIGN_EXTENDED_RHS = 13
     EXCEPT_STAR = 14
     VARIADIC_GENERICS = 15
+    DEBUG_F_STRINGS = 16
     FORCE_OPTIONAL_PARENTHESES = 50
 
     # __future__ flags
@@ -78,6 +79,7 @@ VERSION_TO_FEATURES: Dict[TargetVersion, Set[Feature]] = {
     },
     TargetVersion.PY38: {
         Feature.F_STRINGS,
+        Feature.DEBUG_F_STRINGS,
         Feature.NUMERIC_UNDERSCORES,
         Feature.TRAILING_COMMA_IN_CALL,
         Feature.TRAILING_COMMA_IN_DEF,
@@ -90,6 +92,7 @@ VERSION_TO_FEATURES: Dict[TargetVersion, Set[Feature]] = {
     },
     TargetVersion.PY39: {
         Feature.F_STRINGS,
+        Feature.DEBUG_F_STRINGS,
         Feature.NUMERIC_UNDERSCORES,
         Feature.TRAILING_COMMA_IN_CALL,
         Feature.TRAILING_COMMA_IN_DEF,
@@ -103,6 +106,7 @@ VERSION_TO_FEATURES: Dict[TargetVersion, Set[Feature]] = {
     },
     TargetVersion.PY310: {
         Feature.F_STRINGS,
+        Feature.DEBUG_F_STRINGS,
         Feature.NUMERIC_UNDERSCORES,
         Feature.TRAILING_COMMA_IN_CALL,
         Feature.TRAILING_COMMA_IN_DEF,
@@ -117,6 +121,7 @@ VERSION_TO_FEATURES: Dict[TargetVersion, Set[Feature]] = {
     },
     TargetVersion.PY311: {
         Feature.F_STRINGS,
+        Feature.DEBUG_F_STRINGS,
         Feature.NUMERIC_UNDERSCORES,
         Feature.TRAILING_COMMA_IN_CALL,
         Feature.TRAILING_COMMA_IN_DEF,
@@ -141,12 +146,14 @@ def supports_feature(target_versions: Set[TargetVersion], feature: Feature) -> b
 class Preview(Enum):
     """Individual preview style features."""
 
-    string_processing = auto()
-    remove_redundant_parens = auto()
-    one_element_subscript = auto()
     annotation_parens = auto()
     long_docstring_quotes_on_newline = auto()
+    normalize_docstring_quotes_and_prefixes_properly = auto()
+    one_element_subscript = auto()
     remove_block_trailing_newline = auto()
+    remove_redundant_parens = auto()
+    string_processing = auto()
+    skip_magic_trailing_comma_in_subscript = auto()
 
 
 class Deprecated(UserWarning):
@@ -176,7 +183,6 @@ class Mode:
     def __contains__(self, feature: Preview) -> bool:
         """
         Provide `Preview.FEATURE in Mode` syntax that mirrors the ``preview`` flag.
-
         The argument is not checked and features are not differentiated.
         They only exist to make development easier by clarifying intent.
         """

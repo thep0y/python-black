@@ -47,7 +47,6 @@ class CannotSplit(CannotTransform):
 # See also https://github.com/mypyc/mypyc/issues/827.
 class LineGenerator(Visitor[Line]):
     """Generates reformatted Line objects.  Empty lines are not emitted.
-
     Note: destroys the tree it's visiting by mutating prefixes of its leaves
     in ways that will no longer stringify to valid Python code on the tree.
     """
@@ -59,10 +58,8 @@ class LineGenerator(Visitor[Line]):
 
     def line(self, indent: int = 0) -> Iterator[Line]:
         """Generate a line.
-
         If the line is empty, only emit if it makes sense.
         If the line is too long, split it first and then generate.
-
         If any lines were generated, set up a new current_line.
         """
         if not self.current_line:
@@ -127,13 +124,10 @@ class LineGenerator(Visitor[Line]):
         self, node: Node, keywords: Set[str], parens: Set[str]
     ) -> Iterator[Line]:
         """Visit a statement.
-
         This implementation is shared for `if`, `while`, `for`, `try`, `except`,
         `def`, `with`, `class`, `assert`, and assignments.
-
         The relevant Python language `keywords` for a given statement will be
         NAME leaves within it. This methods puts those on a separate line.
-
         `parens` holds a set of string leaf values immediately after which
         invisible parens should be put.
         """
@@ -220,7 +214,9 @@ class LineGenerator(Visitor[Line]):
         for child in children:
             yield from self.visit(child)
 
-            if child.type == token.ASYNC:
+            if child.type == token.ASYNC or child.type == STANDALONE_COMMENT:
+                # STANDALONE_COMMENT happens when `# fmt: skip` is applied on the async
+                # line.
                 break
 
         internal_stmt = next(children)
@@ -274,7 +270,6 @@ class LineGenerator(Visitor[Line]):
 
     def visit_factor(self, node: Node) -> Iterator[Line]:
         """Force parentheses between a unary op and a binary power:
-
         -2 ** 8 -> -(2 ** 8)
         """
         _operator, operand = node.children
@@ -293,7 +288,24 @@ class LineGenerator(Visitor[Line]):
         if is_docstring(leaf) and "\\\n" not in leaf.value:
             # We're ignoring docstrings with backslash newline escapes because changing
             # indentation of those changes the AST representation of the code.
-            docstring = normalize_string_prefix(leaf.value)
+            if Preview.normalize_docstring_quotes_and_prefixes_properly in self.mode:
+                # There was a bug where --skip-string-normalization wouldn't stop us
+                # from normalizing docstring prefixes. To maintain stability, we can
+                # only address this buggy behaviour while the preview style is enabled.
+                if self.mode.string_normalization:
+                    docstring = normalize_string_prefix(leaf.value)
+                    # visit_default() does handle string normalization for us, but
+                    # since this method acts differently depending on quote style (ex.
+                    # see padding logic below), there's a possibility for unstable
+                    # formatting as visit_default() is called *after*. To avoid a
+                    # situation where this function formats a docstring differently on
+                    # the second pass, normalize it early.
+                    docstring = normalize_string_quotes(docstring)
+                else:
+                    docstring = leaf.value
+            else:
+                # ... otherwise, we'll keep the buggy behaviour >.<
+                docstring = normalize_string_prefix(leaf.value)
             prefix = get_string_prefix(docstring)
             docstring = docstring[len(prefix) :]  # Remove the prefix
             quote_char = docstring[0]
@@ -330,13 +342,14 @@ class LineGenerator(Visitor[Line]):
             # We could enforce triple quotes at this point.
             quote = quote_char * quote_len
 
-            if Preview.long_docstring_quotes_on_newline in self.mode:
+            # It's invalid to put closing single-character quotes on a new line.
+            if Preview.long_docstring_quotes_on_newline in self.mode and quote_len == 3:
                 # We need to find the length of the last line of the docstring
                 # to find if we can add the closing quotes to the line without
                 # exceeding the maximum line length.
                 # If docstring is one line, then we need to add the length
-                # of the indent, prefix, and starting quotes. Ending quote are
-                # handled later
+                # of the indent, prefix, and starting quotes. Ending quotes are
+                # handled later.
                 lines = docstring.splitlines()
                 last_line_length = len(lines[-1]) if docstring else 0
 
@@ -395,9 +408,7 @@ def transform_line(
     line: Line, mode: Mode, features: Collection[Feature] = ()
 ) -> Iterator[Line]:
     """Transform a `line`, potentially splitting it into many lines.
-
     They should fit in the allotted `line_length` but might not be able to.
-
     `features` are syntactical features that may be used in the output.
     """
     if line.is_comment:
@@ -437,7 +448,6 @@ def transform_line(
             self: object, line: Line, features: Collection[Feature]
         ) -> Iterator[Line]:
             """Wraps calls to `right_hand_split`.
-
             The calls increasingly `omit` right-hand trailers (bracket pairs with
             content), meaning the trailers get glued together to split on another
             bracket pair instead.
@@ -514,7 +524,6 @@ def transform_line(
 
 def left_hand_split(line: Line, _features: Collection[Feature] = ()) -> Iterator[Line]:
     """Split line into many lines, starting with the first matching bracket pair.
-
     Note: this usually looks weird, only use this for function definitions.
     Prefer RHS otherwise.  This is why this function is not symmetrical with
     :func:`right_hand_split` which also handles optional parentheses.
@@ -558,11 +567,9 @@ def right_hand_split(
     omit: Collection[LeafID] = (),
 ) -> Iterator[Line]:
     """Split line into many lines, starting with the last matching bracket pair.
-
     If the split was by optional parentheses, attempt splitting without them, too.
     `omit` is a collection of closing bracket IDs that shouldn't be considered for
     this split.
-
     Note: running this function modifies `bracket_depth` on the leaves of `line`.
     """
     tail_leaves: List[Leaf] = []
@@ -641,14 +648,11 @@ def right_hand_split(
 
 def bracket_split_succeeded_or_raise(head: Line, body: Line, tail: Line) -> None:
     """Raise :exc:`CannotSplit` if the last left- or right-hand split failed.
-
     Do nothing otherwise.
-
     A left- or right-hand split is based on a pair of brackets. Content before
     (and including) the opening bracket is left on one line, content inside the
     brackets is put on a separate line, and finally content starting with and
     following the closing bracket is put on a separate line.
-
     Those are called `head`, `body`, and `tail`, respectively. If the split
     produced the same line (all content in `head`) or ended up with an empty `body`
     and the `tail` is just the closing bracket, then it's considered failed.
@@ -669,7 +673,6 @@ def bracket_split_build_line(
     leaves: List[Leaf], original: Line, opening_bracket: Leaf, *, is_body: bool = False
 ) -> Line:
     """Return a new line with given `leaves` and respective comments from `original`.
-
     If `is_body` is True, the result line is one-indented inside brackets and as such
     has its first leaf's prefix normalized and a trailing comma added when expected.
     """
@@ -724,7 +727,6 @@ def bracket_split_build_line(
 
 def dont_increase_indentation(split_func: Transformer) -> Transformer:
     """Normalize prefix of the first leaf in every line returned by `split_func`.
-
     This is a decorator over relevant split functions.
     """
 
@@ -740,7 +742,6 @@ def dont_increase_indentation(split_func: Transformer) -> Transformer:
 @dont_increase_indentation
 def delimiter_split(line: Line, features: Collection[Feature] = ()) -> Iterator[Line]:
     """Split according to delimiters of the highest priority.
-
     If the appropriate Features are given, the split will add trailing commas
     also in function signatures and calls that contain `*` and `**`.
     """
@@ -852,7 +853,6 @@ def standalone_comment_split(
 def normalize_prefix(leaf: Leaf, *, inside_brackets: bool) -> None:
     """Leave existing extra newlines if not `inside_brackets`. Remove everything
     else.
-
     Note: don't use backslashes for formatting or you'll lose your voting rights.
     """
     if not inside_brackets:
@@ -871,10 +871,8 @@ def normalize_invisible_parens(
     node: Node, parens_after: Set[str], *, preview: bool
 ) -> None:
     """Make existing optional parentheses invisible or create new ones.
-
     `parens_after` is a set of string leaf values immediately after which parens
     should be put.
-
     Standardizes on visible parentheses for single-element tuples, and keeps
     existing visible parentheses for other tuples and generator expressions.
     """
@@ -1043,7 +1041,6 @@ def maybe_make_parens_invisible_in_atom(
     """If it's safe, make the parens in the atom `node` invisible, recursively.
     Additionally, remove repeated, adjacent invisible parens from the atom `node`
     as they are redundant.
-
     Returns whether the node should itself be wrapped in invisible parentheses.
     """
     if (
@@ -1125,10 +1122,8 @@ def should_split_line(line: Line, opening_bracket: Leaf) -> bool:
 
 def generate_trailers_to_omit(line: Line, line_length: int) -> Iterator[Set[LeafID]]:
     """Generate sets of closing bracket IDs that should be omitted in a RHS.
-
     Brackets can be omitted if the entire trailer up to and including
     a preceding closing bracket fits in one line.
-
     Yielded sets are cumulative (contain results of previous yields, too).  First
     set is empty, unless the line should explode, in which case bracket pairs until
     the one that needs to explode are omitted.

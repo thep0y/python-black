@@ -1,6 +1,7 @@
-from contextlib import contextmanager
 import io
 import tokenize
+from enum import Enum
+from contextlib import contextmanager
 from typing import Generator, Iterator, List, Set, Tuple, Optional
 
 
@@ -28,6 +29,7 @@ from .parsing import lib2to3_parse
 # lib2to3 fork
 from ..blib2to3.pytree import Node, Leaf
 from ..blib2to3.pgen2 import token
+from .trans import iter_fexpr_spans
 
 from .._black_version import version as __version__
 
@@ -35,6 +37,25 @@ from .._black_version import version as __version__
 FileContent = str
 Encoding = str
 NewLine = str
+
+class WriteBack(Enum):
+    NO = 0
+    YES = 1
+    DIFF = 2
+    CHECK = 3
+    COLOR_DIFF = 4
+
+    @classmethod
+    def from_configuration(
+        cls, *, check: bool, diff: bool, color: bool = False
+    ) -> "WriteBack":
+        if check and not diff:
+            return cls.CHECK
+
+        if diff and color:
+            return cls.COLOR_DIFF
+
+        return cls.DIFF if diff else cls.YES
 
 
 def format_str(src_contents: str, *, mode: Mode) -> FileContent:
@@ -151,6 +172,11 @@ def get_features_used(
             value_head = n.value[:2]
             if value_head in {'f"', 'F"', "f'", "F'", "rf", "fr", "RF", "FR"}:
                 features.add(Feature.F_STRINGS)
+                if Feature.DEBUG_F_STRINGS not in features:
+                    for span_beg, span_end in iter_fexpr_spans(n.value):
+                        if n.value[span_beg : span_end - 1].rstrip().endswith("="):
+                            features.add(Feature.DEBUG_F_STRINGS)
+                            break
 
         elif is_number_token(n):
             if "_" in n.value:
@@ -206,6 +232,7 @@ def get_features_used(
             and n.children[3].type == syms.testlist_star_expr
         ):
             features.add(Feature.ANN_ASSIGN_EXTENDED_RHS)
+
         elif (
             n.type == syms.except_clause
             and len(n.children) >= 2
