@@ -8,6 +8,8 @@ from multiprocessing import Manager
 from pathlib import Path
 from typing import Any, Iterable, Optional, Set
 
+from mypy_extensions import mypyc_attr
+
 from . import WriteBack, format_file_in_place
 from .cache import Cache, filter_cached, read_cache, write_cache
 from .mode import Mode
@@ -36,12 +38,7 @@ def shutdown(loop: asyncio.AbstractEventLoop) -> None:
 
         for task in to_cancel:
             task.cancel()
-        if sys.version_info >= (3, 7):
-            loop.run_until_complete(asyncio.gather(*to_cancel, return_exceptions=True))
-        else:
-            loop.run_until_complete(
-                asyncio.gather(*to_cancel, loop=loop, return_exceptions=True)
-            )
+        loop.run_until_complete(asyncio.gather(*to_cancel, return_exceptions=True))
     finally:
         # `concurrent.futures.Future` objects cannot be cancelled once they
         # are already running. There might be some when the `shutdown()` happened.
@@ -51,6 +48,9 @@ def shutdown(loop: asyncio.AbstractEventLoop) -> None:
         loop.close()
 
 
+# diff-shades depends on being to monkeypatch this function to operate. I know it's
+# not ideal, but this shouldn't cause any issues ... hopefully. ~ichard26
+@mypyc_attr(patchable=True)
 def reformat_many(
     sources: Set[Path],
     fast: bool,
@@ -108,7 +108,9 @@ async def schedule_formatting(
     executor: "Executor",
 ) -> None:
     """Run formatting of `sources` in parallel using the provided `executor`.
+
     (Use ProcessPoolExecutors for actual parallelism.)
+
     `write_back`, `fast`, and `mode` options are passed to
     :func:`format_file_in_place`.
     """
@@ -162,9 +164,6 @@ async def schedule_formatting(
                     sources_to_cache.append(src)
                 report.done(src, changed)
     if cancelled:
-        if sys.version_info >= (3, 7):
-            await asyncio.gather(*cancelled, return_exceptions=True)
-        else:
-            await asyncio.gather(*cancelled, loop=loop, return_exceptions=True)
+        await asyncio.gather(*cancelled, return_exceptions=True)
     if sources_to_cache:
         write_cache(cache, sources_to_cache, mode)

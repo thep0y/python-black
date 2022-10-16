@@ -38,6 +38,7 @@ FileContent = str
 Encoding = str
 NewLine = str
 
+
 class WriteBack(Enum):
     NO = 0
     YES = 1
@@ -144,13 +145,14 @@ def decode_bytes(src: bytes) -> Tuple[FileContent, Encoding, NewLine]:
         return tiow.read(), encoding, newline
 
 
-def get_features_used(
+def get_features_used(  # noqa: C901
     node: Node, *, future_imports: Optional[Set[str]] = None
-) -> Set[Feature]:  # noqa: C901
+) -> Set[Feature]:
     """Return a set of (relatively) new Python features used in this file.
 
     Currently looking for:
     - f-strings;
+    - self-documenting expressions in f-strings (f"{x=}");
     - underscores in numeric literals;
     - trailing commas after * or ** in function signatures and calls;
     - positional only arguments in function signatures and lambdas;

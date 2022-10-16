@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: black.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-07-02 15:11:15
+# @Modified:  2022-10-16 14:42:40
 
 import sublime
 import os
@@ -107,6 +107,7 @@ def really_format(
     """
     default_config: Dict[str, Any] = {
         "line_length": DEFAULT_LINE_LENGTH,
+        "skip_source_first_line": False,
         "skip_string_normalization": False,
         "skip_magic_trailing_comma": False,
         "experimental_string_processing": False,
@@ -133,6 +134,7 @@ def really_format(
         target_versions=versions,
         line_length=int(default_config["line_length"]),
         is_pyi=False,
+        skip_source_first_line=default_config["skip_source_first_line"],
         string_normalization=not default_config["skip_string_normalization"],
         magic_trailing_comma=not default_config["skip_magic_trailing_comma"],
         experimental_string_processing=default_config["experimental_string_processing"],

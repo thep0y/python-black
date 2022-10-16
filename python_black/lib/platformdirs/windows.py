@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ctypes
 import os
+import sys
 from functools import lru_cache
 from typing import Callable
 
@@ -121,6 +122,7 @@ def get_win_folder_from_env_vars(csidl_name: str) -> str:
 
 def get_win_folder_from_registry(csidl_name: str) -> str:
     """Get folder from the registry.
+
     This is a fallback technique at best. I'm not sure if using the
     registry for this guarantees us the correct answer for all CSIDL_*
     names.
@@ -133,7 +135,10 @@ def get_win_folder_from_registry(csidl_name: str) -> str:
     }.get(csidl_name)
     if shell_folder_name is None:
         raise ValueError(f"Unknown CSIDL name: {csidl_name}")
-
+    if (
+        sys.platform != "win32"
+    ):  # only needed for mypy type checker to know that this code runs only on Windows
+        raise NotImplementedError
     import winreg
 
     key = winreg.OpenKey(
