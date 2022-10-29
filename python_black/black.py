@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: black.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-10-29 17:09:29
+# @Modified:  2022-10-29 17:46:51
 
 import sublime
 import sys
@@ -183,7 +183,7 @@ def format_by_import_black_package(
 
     config_file = find_config_file(view, smart_mode)
 
-    logger.debug("found the config file -> %s", config_file)
+    logger.debug("found the config file: %s", config_file)
 
     if smart_mode and not config_file:
         logger.info("smart mode is in use, but the config file is not found")

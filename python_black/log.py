@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: log.py
 # @Created:   2022-10-29 16:21:52
-# @Modified:  2022-10-29 17:24:09
+# @Modified:  2022-10-29 17:45:47
 
 import os
 import logging
@@ -18,6 +18,10 @@ from .color import DisplayStyle, Style
 ds = DisplayStyle()
 
 _style = Literal["%", "{", "$"]
+
+
+class BlackLogger(logging.Logger):
+    pass
 
 
 class Formatter(logging.Formatter):
@@ -182,7 +186,7 @@ def get_logger():
     Returns:
         Logger: the instance of `logging.Logger`
     """
-    logger = logging.getLogger(LOGGER_NAME)
+    logger = BlackLogger(LOGGER_NAME)
 
     level = log_level()
 
@@ -207,5 +211,7 @@ def child_logger(name: str) -> logging.Logger:
         Logger: the instance of `logging.Logger`
     """
     log = __logger.getChild(name.replace(f"{LOGGER_NAME}.", ""))
+    log.setLevel(__logger.level)
+    log.handlers = __logger.handlers
 
     return log

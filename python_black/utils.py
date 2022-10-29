@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: utils.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-10-29 16:59:27
+# @Modified:  2022-10-29 17:47:26
 
 import sublime
 import os
@@ -128,7 +128,7 @@ def get_project_setting_file(view: sublime.View) -> Optional[Path]:
     """
     project_settings_file = find_root_path_of_current_file(view, "pyproject.toml")
 
-    logger.debug("found project config file: %s", project_settings_file)
+    logger.debug("found the project config file: %s", project_settings_file)
 
     if not project_settings_file:
         return None
