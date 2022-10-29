@@ -4,14 +4,14 @@
 # @Email:     thepoy@163.com
 # @File Name: commands.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-07-02 15:12:54
+# @Modified:  2022-10-29 17:02:15
 
 import sublime
 import sublime_plugin
 
 
 from os import path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from .python_black.constants import (
     SETTINGS_FILE_NAME,
@@ -19,7 +19,11 @@ from .python_black.constants import (
     CONFIGURATION_FILENAME,
     CONFIGURATION_CONTENTS,
 )
-from .python_black.utils import black_format
+from .python_black.black import black_format
+from .python_black.mode import Mode
+from .python_black.log import child_logger
+
+logger = child_logger(__name__)
 
 
 class BlackCommand(sublime_plugin.TextCommand):
@@ -33,7 +37,9 @@ class BlackCommand(sublime_plugin.TextCommand):
             region = sublime.Region(0, self.view.size())
         return region, self.view.substr(region), self.view.encoding()
 
-    def run(self, edit: sublime.Edit, use_selection=True):
+    def run(self, edit: sublime.Edit, use_selection=True, smart_mode=False):
+        logger.info("use smart mode: %s", smart_mode)
+
         filename = self.view.file_name() or ""
 
         if self.view.settings().get("syntax").lower().find("python") == -1:
@@ -54,6 +60,7 @@ class BlackCommand(sublime_plugin.TextCommand):
             encoding=encoding,
             edit=edit,
             view=self.view,
+            smart_mode=smart_mode,
         )
 
 
@@ -106,26 +113,30 @@ class BlackCreateConfiguration(sublime_plugin.WindowCommand):
 
 
 class AutoFormatOnSave(sublime_plugin.EventListener):
-    def format_on_save(self, view: sublime.View) -> bool:
+    def format_on_save_mode(self, view: sublime.View) -> Mode:
         settings = sublime.load_settings(SETTINGS_FILE_NAME)
-        status: bool = settings.get("format_on_save", DEFAULT_FORMAT_ON_SAVE)
+        mode = Mode(settings.get("format_on_save", DEFAULT_FORMAT_ON_SAVE))
 
         window = view.window()
         if not window:
-            return status
+            return mode
 
-        project_settings: Dict[str, Dict[str, bool]] = (
-            window.project_data() or {}
-        ).get("settings", {})
+        project_settings: Dict[str, Dict[str, Any]] = (window.project_data() or {}).get(
+            "settings", {}
+        )
 
-        status = project_settings.get("python-black", {}).get("format_on_save", status)
+        mode = project_settings.get("python-black", {}).get("format_on_save", mode)
 
-        return status
+        return mode
 
     def on_pre_save(self, view: sublime.View):
-        if self.format_on_save(view):
+        mode = self.format_on_save_mode(view)
+
+        if mode == Mode.ON:
             view.run_command("black", {"use_selection": False})
             sublime.status_message("black: Document is automatically formatted")
+        elif mode == Mode.SMART:
+            view.run_command("black", {"use_selection": False, "smart_mode": True})
 
 
 class BlackOutputCommand(sublime_plugin.TextCommand):

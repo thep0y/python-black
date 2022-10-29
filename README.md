@@ -50,7 +50,11 @@ There is only one modifiable property in settings:
 
 ```js
 {
-   // Whether to automatically format the entire document when saving
+   // Whether to automatically format the entire document when saving.
+   // There are three modes:
+   //    - `true`
+   //    - `false`
+   //    - `"smart"`: Automatic formatting is only enabled if there is a `black` section in the project's `pyproject.toml`
    "format_on_save": true
 }
 ```
@@ -81,6 +85,32 @@ You can quickly generate a black configuration file for the current project.
 >	}
 >}
 >````
+
+### Development
+
+If you want to fix bugs or add features, you can read log:
+
+   - Colorful: in `python-black.log` in the `[SublimeText]/Log` directory.
+
+   - Colorless: in sublime text console.
+
+You can also add logs where you think they should be logged as follows:
+
+```python
+from .log import child_logger
+
+logger = child_logger(__name__)
+
+
+# ...
+logger.debug("...")
+logger.info("...")
+logger.warning("...")
+logger.error("...")
+# ...
+```
+
+Discussion and creation of PRs are welcome.
 
 ### TODO
 

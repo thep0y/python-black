@@ -4,10 +4,9 @@
 # @Email:     thepoy@163.com
 # @File Name: black.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-10-16 14:42:40
+# @Modified:  2022-10-29 17:09:29
 
 import sublime
-import os
 import sys
 
 from pathlib import Path
@@ -15,34 +14,52 @@ from typing import Optional, Any, Dict, Tuple, List
 
 from .lib.black import format_str
 from .lib.black.mode import Mode, TargetVersion
-from .lib.black.files import find_pyproject_toml, parse_pyproject_toml
 from .lib.black.const import DEFAULT_LINE_LENGTH, DEFAULT_INCLUDES
+from .utils import parse_pyproject_toml, get_project_setting_file, replace_text, out
+from .log import child_logger
 
 
-def out(msg: str):
-    return sublime.status_message(msg)
+logger = child_logger(__name__)
 
 
 def target_version_option_callback(v: Tuple[str, ...]) -> List[TargetVersion]:
     return [TargetVersion[val.upper()] for val in v]
 
 
-def find_global_config_file() -> Optional[str]:
-    HOME = str(Path.home())
+def find_global_config_file() -> Optional[Path]:
+    HOME = Path.home()
 
     if sys.platform == "win32":
-        config_file = os.path.join(HOME, ".black")
+        config_file = HOME / ".black"
     else:
-        config_file = os.path.join(HOME, ".config", "black")
+        config_file = HOME / ".config" / "black"
 
-    if os.path.exists(config_file) and os.path.isfile(config_file):
+    config_file.is_file()
+    if config_file.exists() and config_file.is_file():
         return config_file
     return None
 
 
+def find_config_file(view: sublime.View, smart_mode: bool):
+    config_file = get_project_setting_file(view)
+    if not config_file:
+        # only use `pyproject.toml` in smart mode
+        if smart_mode:
+            return None
+
+        # find global config file
+        config_file = find_global_config_file()
+        if not config_file:
+            return None
+
+    return config_file
+
+
 def read_pyproject_toml(
-    config_file: Optional[str], default_config: Dict[str, Any], src: Tuple[str, ...]
-) -> Tuple[Dict[str, Any], Optional[str]]:
+    config_file: Optional[Path],
+    default_config: Dict[str, Any],
+    smart_mode: bool = False,
+) -> Tuple[Dict[str, Any], Optional[Path]]:
     """Inject Black configuration from "pyproject.toml" into defaults config.
 
     Returns the configuration dict and config file path to
@@ -57,17 +74,23 @@ def read_pyproject_toml(
         Tuple[Optional[dict], Optional[str]]: config and config file
     """
     if not config_file:
-        config_file = find_pyproject_toml(src)
-        if not config_file:
-            # find global config file
-            config_file = find_global_config_file()
-            if not config_file:
-                return default_config, None
+        return default_config, None
 
     try:
-        config = parse_pyproject_toml(config_file)
+        project_config = parse_pyproject_toml(config_file)
     except (OSError, ValueError, FileNotFoundError) as e:
         raise Exception(f"Error reading configuration file: {e}")
+
+    if smart_mode:
+        tool = project_config.get("tool")
+        if not tool:
+            return {}, None
+
+        black_section = tool.get("black")
+        if not black_section:
+            return {}, None
+
+    config = project_config.get("tool", {}).get("black", {})
 
     if not config:
         return default_config, None
@@ -90,7 +113,9 @@ def read_pyproject_toml(
 
 
 def really_format(
-    code: str, src: Tuple[str, ...], config_file: Optional[str] = None
+    code: str,
+    config_file: Optional[Path],
+    smart_mode: bool = False,
 ) -> Optional[str]:
     """
     Directly call the format function of the `black`
@@ -114,8 +139,14 @@ def really_format(
         "include": DEFAULT_INCLUDES,
     }
 
-    default_config, config_file = read_pyproject_toml(config_file, default_config, src)
+    default_config, config_file = read_pyproject_toml(
+        config_file, default_config, smart_mode
+    )
     if not default_config:
+        logger.info(
+            "smart mode is in use, but the black section is not found in the config file"
+        )
+        sublime.status_message("black: Black section is not found")
         return None
 
     if config_file:
@@ -143,3 +174,63 @@ def really_format(
     if code:
         formatted = format_str(code, mode=mode)
         return formatted
+
+
+def format_by_import_black_package(
+    view: sublime.View, source: str, smart_mode: bool = False
+) -> Optional[str]:
+    from .black import really_format
+
+    config_file = find_config_file(view, smart_mode)
+
+    logger.debug("found the config file -> %s", config_file)
+
+    if smart_mode and not config_file:
+        logger.info("smart mode is in use, but the config file is not found")
+        sublime.status_message("black: Config file is not found")
+        return None
+
+    formatted = really_format(source, config_file, smart_mode=smart_mode)
+    if not formatted:
+        # When formatting the selection, an error may be
+        # reported due to indentation issues, but this is
+        # a issue with `black` and I may fix it in the future.
+        if not smart_mode:
+            sublime.status_message("black: Format failed")
+
+        return
+
+    return formatted
+
+
+def black_format(
+    source: str,
+    filepath: str,
+    region: sublime.Region,
+    encoding: str,
+    edit: sublime.Edit,
+    view: sublime.View,
+    smart_mode: bool = False,
+    # preview: bool = False,
+):
+    sublime.status_message("black: Formatting...")
+
+    formatted = format_by_import_black_package(view, source, smart_mode)
+
+    if formatted:
+        format_source_file(edit, formatted, filepath, view, region, encoding)
+
+
+def format_source_file(
+    edit: sublime.Edit,
+    formatted: str,
+    filepath: str,
+    view: sublime.View,
+    region: sublime.Region,
+    encoding: str,
+):
+    if view:
+        replace_text(edit, view, region, formatted)
+    else:
+        with open(filepath, "w", encoding=encoding) as fd:
+            fd.write(formatted)

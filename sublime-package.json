@@ -9,8 +9,16 @@
           "$id": "sublime://settings/python-black",
           "properties": {
             "format_on_save": {
-              "type": "boolean",
+              "type": [
+                "boolean",
+                "string"
+              ],
               "default": true,
+              "enum": [
+                true,
+                false,
+                "smart",
+              ],
               "markdownDescription": "Whether to **automatically format** the entire document when saving."
             }
           }

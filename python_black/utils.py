@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: utils.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-02-14 19:49:24
+# @Modified:  2022-10-29 16:59:27
 
 import sublime
 import os
@@ -14,9 +14,14 @@ import locale
 import difflib
 
 from io import StringIO
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 from collections import namedtuple
+from pathlib import Path
 from .constants import STATUS_MESSAGE_TIMEOUT
+from .lib import tomli as tomllib
+from .log import child_logger
+
+logger = child_logger(__name__)
 
 
 ViewState = namedtuple("ViewState", ["row", "col", "vector"])
@@ -101,16 +106,19 @@ def find_current_file_path(view: sublime.View, filename: str) -> Optional[str]:
     return os.path.join(filepath, filename)
 
 
-def find_root_path_of_current_file(view: sublime.View, filename: str) -> Optional[str]:
+def find_root_path_of_current_file(view: sublime.View, filename: str) -> Optional[Path]:
     window = view.window()
     # root path of current window
     folders = window.folders()  # type: ignore
+
+    logger.debug("folders: %s", folders)
+
     if len(folders) > 0:
-        return os.path.join(folders[0], filename)
+        return Path(folders[0]) / filename
     return None
 
 
-def get_project_setting_file(view: sublime.View) -> Optional[str]:
+def get_project_setting_file(view: sublime.View) -> Optional[Path]:
     """find `pyproject.toml` in root path of current window
 
     Arguments:
@@ -119,6 +127,9 @@ def get_project_setting_file(view: sublime.View) -> Optional[str]:
         Optional[str] -- return black config file, or return None
     """
     project_settings_file = find_root_path_of_current_file(view, "pyproject.toml")
+
+    logger.debug("found project config file: %s", project_settings_file)
+
     if not project_settings_file:
         return None
     if not os.path.exists(project_settings_file):
@@ -160,21 +171,6 @@ def replace_text(
     sublime.status_message("black: Formatted")
 
 
-def format_source_file(
-    edit: sublime.Edit,
-    formatted: str,
-    filepath: str,
-    view: sublime.View,
-    region: sublime.Region,
-    encoding: str,
-):
-    if view:
-        replace_text(edit, view, region, formatted)
-    else:
-        with open(filepath, "w", encoding=encoding) as fd:
-            fd.write(formatted)
-
-
 def get_site_packages_path(command: str) -> List[str]:
     if sys.platform == "win32":
         return [os.path.join(command.split("Scripts")[0], "Lib", "site-packages")]
@@ -193,31 +189,15 @@ def black_command_is_absolute_path(command: str) -> bool:
     return os.path.isabs(command)
 
 
-def format_by_import_black_package(source: str, filepath: str) -> Optional[str]:
-    from .black import really_format
+def parse_pyproject_toml(path_config: Path) -> Dict[str, Any]:
+    """Parse a pyproject toml file, pulling out relevant parts for Black
 
-    formatted = really_format(source, src=(filepath,))
-    if not formatted:
-        # When formatting the selection, an error may be
-        # reported due to indentation issues, but this is
-        # a issue with `black` and I may fix it in the future.
-        sublime.status_message("black: Format failed")
-        return
-    return formatted
+    If parsing fails, will raise a tomllib.TOMLDecodeError
+    """
+    with open(path_config, "rb") as f:
+        pyproject_toml = tomllib.load(f)
+        return pyproject_toml
 
 
-def black_format(
-    source: str,
-    filepath: str,
-    region: sublime.Region,
-    encoding: str,
-    edit: sublime.Edit,
-    view: sublime.View,
-    # preview: bool = False,
-):
-    sublime.status_message("black: Formatting...")
-
-    formatted = format_by_import_black_package(source, filepath)
-
-    if formatted:
-        format_source_file(edit, formatted, filepath, view, region, encoding)
+def out(msg: str):
+    return sublime.status_message(msg)
