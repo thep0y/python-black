@@ -4,24 +4,24 @@
 # @Email:     thepoy@163.com
 # @File Name: commands.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-11-01 20:41:15
+# @Modified:  2022-11-01 21:15:22
 
 import sublime
 import sublime_plugin
 
 
 from os import path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 from .python_black.constants import (
     SETTINGS_FILE_NAME,
-    DEFAULT_FORMAT_ON_SAVE,
     CONFIGURATION_FILENAME,
     CONFIGURATION_CONTENTS,
 )
 from .python_black.black import black_format
 from .python_black.mode import Mode
 from .python_black.log import child_logger
+from .python_black.utils import get_mode
 
 logger = child_logger(__name__)
 
@@ -115,7 +115,14 @@ class BlackCreateConfiguration(sublime_plugin.WindowCommand):
 class AutoFormatOnSave(sublime_plugin.EventListener):
     def format_on_save_mode(self, view: sublime.View) -> Mode:
         settings = sublime.load_settings(SETTINGS_FILE_NAME)
-        mode = Mode(settings.get("format_on_save", DEFAULT_FORMAT_ON_SAVE))
+        _mode: Union[str, bool] = settings.get("format_on_save", "off")
+        if isinstance(_mode, str):
+            mode = Mode(_mode)
+        else:
+            if _mode:
+                mode = Mode.ON
+            else:
+                mode = Mode.OFF
 
         window = view.window()
         if not window:
@@ -150,14 +157,20 @@ class BlackOutputCommand(sublime_plugin.TextCommand):
 
 class ToggleFormatOnSaveCommand(sublime_plugin.TextCommand):
     def run(self, edit):
-        settings = sublime.load_settings(SETTINGS_FILE_NAME)
-        format_on_save = not settings.get("format_on_save", DEFAULT_FORMAT_ON_SAVE)
-        settings.set("format_on_save", format_on_save)
-        sublime.save_settings(SETTINGS_FILE_NAME)
+        settings, mode = get_mode()
 
-    def is_checked(self):
-        settings = sublime.load_settings(SETTINGS_FILE_NAME)
-        return bool(settings.get("format_on_save", DEFAULT_FORMAT_ON_SAVE))
+        if mode == Mode.SMART:
+            sublime.error_message("black: Unable to toggle in `smart` mode")
+            return
+
+        if mode == Mode.ON:
+            settings.set("format_on_save", "off")
+            logger.info("turn off")
+        else:
+            settings.set("format_on_save", "on")
+            logger.info("turn on")
+
+        sublime.save_settings(SETTINGS_FILE_NAME)
 
     def description(self):
         return "Format On Save (Global)"

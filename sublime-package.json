@@ -17,6 +17,8 @@
               "enum": [
                 true,
                 false,
+                "on",
+                "off",
                 "smart",
               ],
               "markdownDescription": "Whether to **automatically format** the entire document when saving."

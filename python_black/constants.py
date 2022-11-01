@@ -4,13 +4,12 @@
 # @Email:     thepoy@163.com
 # @File Name: constants.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-10-29 16:26:23
+# @Modified:  2022-11-01 20:58:23
 
 PACKAGE_NAME = "python-black"
 INSTALLED_PACKAGE_NAME = f"{PACKAGE_NAME}.sublime-package"
 SETTINGS_FILE_NAME = "%s.sublime-settings" % PACKAGE_NAME
 
-DEFAULT_FORMAT_ON_SAVE = False
 
 WORKER_TIMEOUT = 0
 WORKER_START_TIMEOUT = 100

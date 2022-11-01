@@ -52,10 +52,12 @@ There is only one modifiable property in settings:
 {
    // Whether to automatically format the entire document when saving.
    // There are three modes:
-   //    - `true`
-   //    - `false`
-   //    - `"smart"`: Automatic formatting is only enabled if there is a `black` section in the project's `pyproject.toml`
-   "format_on_save": true
+   //    - true (deprecated)
+   //    - false (deprecated)
+   //    - "on"
+   //    - "off"
+   //    - "smart": Automatic formatting is only enabled if there is a `black` section in the project's `pyproject.toml`
+   "format_on_save": "on"
 }
 ```
 
