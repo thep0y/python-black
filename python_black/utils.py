@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: utils.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-10-29 17:47:26
+# @Modified:  2022-11-01 20:46:30
 
 import sublime
 import os
@@ -14,17 +14,24 @@ import locale
 import difflib
 
 from io import StringIO
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 from collections import namedtuple
 from pathlib import Path
 from .constants import STATUS_MESSAGE_TIMEOUT
-from .lib import tomli as tomllib
 from .log import child_logger
 
 logger = child_logger(__name__)
 
 
 ViewState = namedtuple("ViewState", ["row", "col", "vector"])
+
+
+def show_error_panel(text: str):
+    view = sublime.active_window().get_output_panel("black")
+    view.set_read_only(False)
+    view.run_command("black_output", {"text": text})
+    view.set_read_only(True)
+    sublime.active_window().run_command("show_panel", {"panel": "output.black"})
 
 
 def create_diff(source: str, formatted: str, filepath: str) -> str:
@@ -61,9 +68,7 @@ def popen(cmd: List[Any]):
             bufsize=1,
         )
     except FileNotFoundError:
-        sublime.error_message(
-            "Unable to find the command, did you not install `black`?"
-        )
+        sublime.error_message("Unable to find the command, did you not install `black`?")
 
 
 def new_view(encoding: str, text: str):
@@ -93,9 +98,7 @@ def show_result(result):
     # show diff.
     if diffs:
         new_view("utf-8", "\n".join(diffs))
-    sublime.set_timeout_async(
-        lambda: sublime.status_message(""), STATUS_MESSAGE_TIMEOUT
-    )
+    sublime.set_timeout_async(lambda: sublime.status_message(""), STATUS_MESSAGE_TIMEOUT)
 
 
 def find_current_file_path(view: sublime.View, filename: str) -> Optional[str]:
@@ -115,6 +118,7 @@ def find_root_path_of_current_file(view: sublime.View, filename: str) -> Optiona
 
     if len(folders) > 0:
         return Path(folders[0]) / filename
+
     return None
 
 
@@ -128,12 +132,14 @@ def get_project_setting_file(view: sublime.View) -> Optional[Path]:
     """
     project_settings_file = find_root_path_of_current_file(view, "pyproject.toml")
 
-    logger.debug("found the project config file: %s", project_settings_file)
-
     if not project_settings_file:
         return None
+
     if not os.path.exists(project_settings_file):
         return None
+
+    logger.debug("found the project config file: %s", project_settings_file)
+
     return project_settings_file
 
 
@@ -158,9 +164,7 @@ def restore_state(view: sublime.View, state: ViewState):
     view.set_viewport_position(state.vector)
 
 
-def replace_text(
-    edit: sublime.Edit, view: sublime.View, region: sublime.Region, text: str
-):
+def replace_text(edit: sublime.Edit, view: sublime.View, region: sublime.Region, text: str):
     state = save_state(view)
     if region.b - region.a < view.size():
         lines = text.split("\n")
@@ -177,9 +181,7 @@ def get_site_packages_path(command: str) -> List[str]:
     else:
         lib_path = os.path.join(command.replace("bin/black", ""), "lib")
         return [
-            os.path.join(lib_path, i, "site-packages")
-            for i in os.listdir(lib_path)
-            if i.lower().startswith("python")
+            os.path.join(lib_path, i, "site-packages") for i in os.listdir(lib_path) if i.lower().startswith("python")
         ]
 
 
@@ -187,16 +189,6 @@ def black_command_is_absolute_path(command: str) -> bool:
     if not os.path.exists(command):
         return False
     return os.path.isabs(command)
-
-
-def parse_pyproject_toml(path_config: Path) -> Dict[str, Any]:
-    """Parse a pyproject toml file, pulling out relevant parts for Black
-
-    If parsing fails, will raise a tomllib.TOMLDecodeError
-    """
-    with open(path_config, "rb") as f:
-        pyproject_toml = tomllib.load(f)
-        return pyproject_toml
 
 
 def out(msg: str):
