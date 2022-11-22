@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: commands.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-11-01 21:15:22
+# @Modified:  2022-11-22 22:48:41
 
 import sublime
 import sublime_plugin
@@ -115,24 +115,23 @@ class BlackCreateConfiguration(sublime_plugin.WindowCommand):
 class AutoFormatOnSave(sublime_plugin.EventListener):
     def format_on_save_mode(self, view: sublime.View) -> Mode:
         settings = sublime.load_settings(SETTINGS_FILE_NAME)
-        _mode: Union[str, bool] = settings.get("format_on_save", "off")
+        _mode: Union[str, bool] = settings.get("format_on_save", "off")  # type: ignore
+
+        window = view.window()
+        if window:
+            # fmt: off
+            project_settings: Dict[str, Dict[str, Any]] = (
+                window.project_data() or {}
+            ).get("settings", {}) # type: ignore
+            # fmt: on
+            _mode = project_settings.get("python-black", {}).get(
+                "format_on_save", _mode
+            )
+
         if isinstance(_mode, str):
             mode = Mode(_mode)
         else:
-            if _mode:
-                mode = Mode.ON
-            else:
-                mode = Mode.OFF
-
-        window = view.window()
-        if not window:
-            return mode
-
-        project_settings: Dict[str, Dict[str, Any]] = (window.project_data() or {}).get(
-            "settings", {}
-        )
-
-        mode = project_settings.get("python-black", {}).get("format_on_save", mode)
+            mode = Mode.ON if _mode else Mode.OFF
 
         return mode
 
@@ -141,7 +140,7 @@ class AutoFormatOnSave(sublime_plugin.EventListener):
 
         if mode == Mode.ON:
             view.run_command("black", {"use_selection": False})
-            sublime.status_message("black: Document is automatically formatted")
+            sublime.status_message("black: Document has been automatically formatted")
         elif mode == Mode.SMART:
             view.run_command("black", {"use_selection": False, "smart_mode": True})
 
