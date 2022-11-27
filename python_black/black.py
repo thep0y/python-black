@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 from typing import Optional, Any, Dict, Tuple, List
 
+from .constants import SETTINGS_FILE_NAME
 from .lib.black import format_str
 from .lib.black.files import parse_pyproject_toml
 from .lib.black.mode import Mode, TargetVersion
@@ -55,6 +56,22 @@ def find_config_file(view: sublime.View, smart_mode: bool):
             return None
 
     return config_file
+
+
+def get_project_config(view: sublime.View) -> Dict[str, Any]:
+    settings = sublime.load_settings(SETTINGS_FILE_NAME)
+    settings_config = settings.to_dict()
+    logger.info("settings config: %s", settings_config)
+    window = view.window()
+    if not window:
+        return {}
+
+    project_settings: Dict[str, Dict[str, Any]] = (
+        window.project_data() or {}
+    ).get("settings", {})
+    project_config = project_settings.get("python-black", {})
+    logger.info("project config: %s", project_config)
+    return {**settings_config, **project_config}
 
 
 def read_pyproject_toml(
@@ -112,6 +129,7 @@ def read_pyproject_toml(
 def really_format(
     code: str,
     config_file: Optional[Path],
+    project_config: Dict[str, Any],
     smart_mode: bool,
 ) -> Optional[str]:
     """
@@ -161,6 +179,8 @@ def really_format(
         if target_version:
             versions = set(target_version)
 
+    default_config.update(project_config)
+    logger.info(f"apply black options: {default_config}.")
     mode = Mode(
         target_versions=versions,
         line_length=int(default_config["line_length"]),
@@ -184,13 +204,17 @@ def format_by_import_black_package(
 
     logger.debug("found the config file: %s", config_file)
 
+    project_config = get_project_config(view)
+
+    logger.debug("get the project config: %s", project_config)
+
     if smart_mode and not config_file:
         logger.info("smart mode is in use, but the project config file is not found")
         sublime.status_message("black: Project config file is not found")
 
         return None
 
-    formatted = really_format(source, config_file, smart_mode=smart_mode)
+    formatted = really_format(source, config_file, project_config, smart_mode)
     if not formatted:
         # When formatting the selection, an error may be
         # reported due to indentation issues, but this is
