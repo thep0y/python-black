@@ -58,10 +58,14 @@ def find_config_file(view: sublime.View, smart_mode: bool):
     return config_file
 
 
-def get_project_config(view: sublime.View) -> Dict[str, Any]:
+def get_settings_config(view: sublime.View) -> Dict[str, Any]:
     settings = sublime.load_settings(SETTINGS_FILE_NAME)
     settings_config = settings.to_dict()
     logger.info("settings config: %s", settings_config)
+    return settings_config
+
+
+def get_project_config(view: sublime.View) -> Dict[str, Any]:
     window = view.window()
     if not window:
         return {}
@@ -71,7 +75,7 @@ def get_project_config(view: sublime.View) -> Dict[str, Any]:
     ).get("settings", {})
     project_config = project_settings.get("python-black", {})
     logger.info("project config: %s", project_config)
-    return {**settings_config, **project_config}
+    return project_config
 
 
 def read_pyproject_toml(
@@ -129,6 +133,7 @@ def read_pyproject_toml(
 def really_format(
     code: str,
     config_file: Optional[Path],
+    settings_config: Dict[str, Any],
     project_config: Dict[str, Any],
     smart_mode: bool,
 ) -> Optional[str]:
@@ -141,6 +146,8 @@ def really_format(
         src (Tuple[str, ...]): Files path to be formatted.
             Currently only one file can be formatted, so only one path can be passed in
         config_file (Optional[str]): Configuration file to be used (default: {None})
+        settings_config (Dict[str, Any]): Configuration in settings
+        project_config (Dict[str, Any]): Configuration in project
 
     Returns:
         Optional[str]: Formatted code
@@ -153,6 +160,10 @@ def really_format(
         "experimental_string_processing": False,
         "include": DEFAULT_INCLUDES,
     }
+
+    default_config.update(
+        {k: settings_config[k] for k in settings_config if k in default_config}
+    )
 
     if config_file:
         default_config, config_file = read_pyproject_toml(
@@ -179,7 +190,9 @@ def really_format(
         if target_version:
             versions = set(target_version)
 
-    default_config.update(project_config)
+    default_config.update(
+        {k: project_config[k] for k in project_config if k in default_config}
+    )
     logger.info(f"apply black options: {default_config}.")
     mode = Mode(
         target_versions=versions,
@@ -204,6 +217,10 @@ def format_by_import_black_package(
 
     logger.debug("found the config file: %s", config_file)
 
+    settings_config = get_settings_config(view)
+
+    logger.debug("get the settings config: %s", settings_config)
+
     project_config = get_project_config(view)
 
     logger.debug("get the project config: %s", project_config)
@@ -214,7 +231,9 @@ def format_by_import_black_package(
 
         return None
 
-    formatted = really_format(source, config_file, project_config, smart_mode)
+    formatted = really_format(
+        source, config_file, settings_config, project_config, smart_mode
+    )
     if not formatted:
         # When formatting the selection, an error may be
         # reported due to indentation issues, but this is

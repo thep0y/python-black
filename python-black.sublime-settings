@@ -11,5 +11,6 @@
    "line_length": "88",
    "skip_source_first_line": false,
    "skip_string_normalization": false,
-   "skip_magic_trailing_comma": false
+   "skip_magic_trailing_comma": false,
+   "experimental_string_processing": false
 }
