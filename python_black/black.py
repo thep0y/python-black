@@ -58,14 +58,14 @@ def find_config_file(view: sublime.View, smart_mode: bool):
     return config_file
 
 
-def get_settings_config(view: sublime.View) -> Dict[str, Any]:
+def get_sublime_settings_config(view: sublime.View) -> Dict[str, Any]:
     settings = sublime.load_settings(SETTINGS_FILE_NAME)
     settings_config = settings.to_dict()
-    logger.info("settings config: %s", settings_config)
+    logger.debug("sublime settings config: %s", settings_config)
     return settings_config
 
 
-def get_project_config(view: sublime.View) -> Dict[str, Any]:
+def get_sublime_project_config(view: sublime.View) -> Dict[str, Any]:
     window = view.window()
     if not window:
         return {}
@@ -74,7 +74,7 @@ def get_project_config(view: sublime.View) -> Dict[str, Any]:
         window.project_data() or {}
     ).get("settings", {})
     project_config = project_settings.get("python-black", {})
-    logger.info("project config: %s", project_config)
+    logger.debug("sublime project config: %s", project_config)
     return project_config
 
 
@@ -217,13 +217,13 @@ def format_by_import_black_package(
 
     logger.debug("found the config file: %s", config_file)
 
-    settings_config = get_settings_config(view)
+    settings_config = get_sublime_settings_config(view)
 
-    logger.debug("get the settings config: %s", settings_config)
+    logger.debug("get config from sublime settings: %s", settings_config)
 
-    project_config = get_project_config(view)
+    project_config = get_sublime_project_config(view)
 
-    logger.debug("get the project config: %s", project_config)
+    logger.debug("get config from sublime project: %s", project_config)
 
     if smart_mode and not config_file:
         logger.info("smart mode is in use, but the project config file is not found")
