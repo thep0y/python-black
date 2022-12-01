@@ -12,7 +12,6 @@ import sys
 from pathlib import Path
 from typing import Optional, Any, Dict, Tuple, List
 
-from .constants import SETTINGS_FILE_NAME
 from .lib.black import format_str
 from .lib.black.files import parse_pyproject_toml
 from .lib.black.mode import Mode, TargetVersion
