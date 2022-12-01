@@ -58,26 +58,6 @@ def find_config_file(view: sublime.View, smart_mode: bool):
     return config_file
 
 
-def get_sublime_settings_config(view: sublime.View) -> Dict[str, Any]:
-    settings = sublime.load_settings(SETTINGS_FILE_NAME)
-    settings_config = settings.to_dict()
-    logger.debug("sublime settings config: %s", settings_config)
-    return settings_config
-
-
-def get_sublime_project_config(view: sublime.View) -> Dict[str, Any]:
-    window = view.window()
-    if not window:
-        return {}
-
-    project_settings: Dict[str, Dict[str, Any]] = (
-        window.project_data() or {}
-    ).get("settings", {})
-    project_config = project_settings.get("python-black", {})
-    logger.debug("sublime project config: %s", project_config)
-    return project_config
-
-
 def read_pyproject_toml(
     config_file: Path,
     default_config: Dict[str, Any],
@@ -133,9 +113,9 @@ def read_pyproject_toml(
 def really_format(
     code: str,
     config_file: Optional[Path],
-    settings_config: Dict[str, Any],
-    project_config: Dict[str, Any],
     smart_mode: bool,
+    package_settings: Optional[Dict[str, Any]],
+    project_settings: Optional[Dict[str, Any]],
 ) -> Optional[str]:
     """
     Directly call the format function of the `black`
@@ -146,8 +126,8 @@ def really_format(
         src (Tuple[str, ...]): Files path to be formatted.
             Currently only one file can be formatted, so only one path can be passed in
         config_file (Optional[str]): Configuration file to be used (default: {None})
-        settings_config (Dict[str, Any]): Configuration in settings
-        project_config (Dict[str, Any]): Configuration in project
+        package_settings (Optional[Dict[str, Any]]): Package settings
+        project_settings (Optional[Dict[str, Any]]): Project settings
 
     Returns:
         Optional[str]: Formatted code
@@ -160,10 +140,11 @@ def really_format(
         "experimental_string_processing": False,
         "include": DEFAULT_INCLUDES,
     }
-
-    default_config.update(
-        {k: settings_config[k] for k in settings_config if k in default_config}
-    )
+    # NOTE: Update default config from package settings.
+    if isinstance(package_settings, dict):
+        default_config.update(
+            {k: package_settings[k] for k in package_settings if k in default_config}
+        )
 
     if config_file:
         default_config, config_file = read_pyproject_toml(
@@ -190,9 +171,12 @@ def really_format(
         if target_version:
             versions = set(target_version)
 
-    default_config.update(
-        {k: project_config[k] for k in project_config if k in default_config}
-    )
+    # NOTE: Update default config from project settings.
+    if isinstance(project_settings, dict):
+        default_config.update(
+            {k: project_settings[k] for k in project_settings if k in default_config}
+        )
+
     logger.info(f"apply black options: {default_config}.")
     mode = Mode(
         target_versions=versions,
@@ -211,28 +195,28 @@ def really_format(
 
 
 def format_by_import_black_package(
-    view: sublime.View, source: str, smart_mode: bool
+    view: sublime.View,
+    source: str,
+    smart_mode: bool,
+    package_settings: Dict[str, Any],
+    project_settings: Dict[str, Any],
 ) -> Optional[str]:
     config_file = find_config_file(view, smart_mode)
 
     logger.debug("found the config file: %s", config_file)
 
-    settings_config = get_sublime_settings_config(view)
-
-    logger.debug("get config from sublime settings: %s", settings_config)
-
-    project_config = get_sublime_project_config(view)
-
-    logger.debug("get config from sublime project: %s", project_config)
-
     if smart_mode and not config_file:
         logger.info("smart mode is in use, but the project config file is not found")
         sublime.status_message("black: Project config file is not found")
 
-        return None
+        return
+
+    # NOTE: Ignore package and project settings if smart mode is enabled.
+    if smart_mode:
+        package_settings, project_settings = None, None
 
     formatted = really_format(
-        source, config_file, settings_config, project_config, smart_mode
+        source, config_file, smart_mode, package_settings, project_settings
     )
     if not formatted:
         # When formatting the selection, an error may be
@@ -254,11 +238,15 @@ def black_format(
     edit: sublime.Edit,
     view: sublime.View,
     smart_mode: bool,
+    package_settings: Dict[str, Any],
+    project_settings: Dict[str, Any],
     # preview: bool = False,
 ):
     sublime.status_message("black: Formatting...")
 
-    formatted = format_by_import_black_package(view, source, smart_mode)
+    formatted = format_by_import_black_package(
+        view, source, smart_mode, package_settings, project_settings
+    )
 
     if formatted:
         format_source_file(edit, formatted, filepath, view, region, encoding)
