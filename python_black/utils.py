@@ -221,5 +221,11 @@ def get_mode():
             mode = Mode.ON
         else:
             mode = Mode.OFF
+    return mode
 
-    return settings, mode
+
+def set_mode(mode: Mode) -> None:
+    logger.info("Setting mode to %r", mode)
+    settings = sublime.load_settings(SETTINGS_FILE_NAME)
+    settings.set("format_on_save", mode.value)
+    sublime.save_settings(SETTINGS_FILE_NAME)

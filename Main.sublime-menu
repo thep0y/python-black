@@ -10,9 +10,10 @@
                     {
                         "caption": "Python Black",
                         "children": [
-                            {
-                                "command": "toggle_format_on_save",
-                            },
+                            { "command": "set_format_on_save_to_smart" },
+                            { "command": "set_format_on_save_to_on" },
+                            { "command": "set_format_on_save_to_off" },
+                            { "caption": "-" },
                             {
                                 "caption": "Settings",
                                 "command": "edit_settings",
