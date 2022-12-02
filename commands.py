@@ -21,7 +21,7 @@ from .python_black.constants import (
 from .python_black.black import black_format
 from .python_black.mode import Mode
 from .python_black.log import child_logger
-from .python_black.utils import get_mode
+from .python_black.utils import get_mode, set_mode
 
 logger = child_logger(__name__)
 
@@ -156,20 +156,48 @@ class BlackOutputCommand(sublime_plugin.TextCommand):
 
 class ToggleFormatOnSaveCommand(sublime_plugin.TextCommand):
     def run(self, edit):
-        settings, mode = get_mode()
-
+        mode = get_mode()
         if mode == Mode.SMART:
             sublime.error_message("black: Unable to toggle in `smart` mode")
-            return
-
-        if mode == Mode.ON:
-            settings.set("format_on_save", "off")
-            logger.info("turn off")
         else:
-            settings.set("format_on_save", "on")
-            logger.info("turn on")
-
-        sublime.save_settings(SETTINGS_FILE_NAME)
+            new_mode = Mode.ON if mode == Mode.OFF else Mode.OFF
+            set_mode(new_mode)
 
     def description(self):
         return "Format On Save (Global)"
+
+
+class SetFormatOnSaveToSmartCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        set_mode(Mode.SMART)
+
+    def is_checked(self):
+        mode = get_mode()
+        return mode == Mode.SMART
+
+    def description(self):
+        return 'Set "Format On Save" to "Smart"'
+
+
+class SetFormatOnSaveToOnCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        set_mode(Mode.ON)
+
+    def is_checked(self):
+        mode = get_mode()
+        return mode == Mode.ON
+
+    def description(self):
+        return 'Set "Format On Save" to "On"'
+
+
+class SetFormatOnSaveToOffCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        set_mode(Mode.OFF)
+
+    def is_checked(self):
+        mode = get_mode()
+        return mode == Mode.OFF
+
+    def description(self):
+        return 'Set "Format On Save" to "Off"'
