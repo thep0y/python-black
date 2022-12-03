@@ -20,6 +20,7 @@ from pathlib import Path
 from .constants import PACKAGE_NAME, SETTINGS_FILE_NAME, STATUS_MESSAGE_TIMEOUT
 from .log import child_logger
 from .mode import Mode
+from .lib.black.files import find_pyproject_toml
 
 logger = child_logger(__name__)
 
@@ -114,15 +115,21 @@ def find_current_file_path(view: sublime.View, filename: str) -> Optional[str]:
     return os.path.join(filepath, filename)
 
 
-def find_root_path_of_current_file(view: sublime.View, filename: str) -> Optional[Path]:
-    window = view.window()
-    # root path of current window
-    folders = window.folders()  # type: ignore
+def find_root_path_of_current_file(view: sublime.View) -> Optional[Path]:
+    current_file_name = view.file_name()
+    if current_file_name:
+        black_config_file = find_pyproject_toml((current_file_name,))
+        if black_config_file:
+            logger.debug("black found config file: %s", black_config_file)
+            return black_config_file
 
-    logger.debug("folders: %s", folders)
-
-    if len(folders) > 0:
-        return Path(folders[0]) / filename
+    folders = view.window().folders()  # type: ignore
+    logger.debug(
+        "black didn't find config file, falling back to first folder in project list: %s",
+        folders,
+    )
+    if folders:
+        return Path(folders[0]) / "pyproject.toml"
 
     return None
 
@@ -135,7 +142,7 @@ def get_project_setting_file(view: sublime.View) -> Optional[Path]:
     Returns:
         Optional[str] -- return black config file, or return None
     """
-    project_settings_file = find_root_path_of_current_file(view, "pyproject.toml")
+    project_settings_file = find_root_path_of_current_file(view)
 
     if not project_settings_file:
         return None
@@ -232,5 +239,11 @@ def get_mode():
             mode = Mode.ON
         else:
             mode = Mode.OFF
+    return mode
 
-    return settings, mode
+
+def set_mode(mode: Mode) -> None:
+    logger.info("Setting mode to %r", mode)
+    settings = sublime.load_settings(SETTINGS_FILE_NAME)
+    settings.set("format_on_save", mode.value)
+    sublime.save_settings(SETTINGS_FILE_NAME)
