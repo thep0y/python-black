@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: log.py
 # @Created:   2022-10-29 16:21:52
-# @Modified:  2022-10-29 17:57:35
+# @Modified:  2022-12-17 19:30:15
 
 import os
 import logging
@@ -109,7 +109,7 @@ class Formatter(logging.Formatter):
         if self.to_file:
             return ds.format_with_one_style("-", ds.fc.light_cyan) + " "
 
-        return "- "
+        return " - "
 
     def format(self, record: logging.LogRecord):
         record.message = record.getMessage()

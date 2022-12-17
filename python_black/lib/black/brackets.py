@@ -1,10 +1,7 @@
 """Builds on top of nodes.py to track brackets."""
 
 from dataclasses import dataclass, field
-import sys
-from typing import Dict, Iterable, List, Optional, Tuple, Union
-
-from typing import Final
+from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union, Final
 
 from ..blib2to3.pytree import Leaf, Node
 from ..blib2to3.pgen2 import token
@@ -329,3 +326,32 @@ def max_delimiter_priority_in_atom(node: LN) -> Priority:
 
     except ValueError:
         return 0
+
+
+def get_leaves_inside_matching_brackets(leaves: Sequence[Leaf]) -> Set[LeafID]:
+    """Return leaves that are inside matching brackets.
+
+    The input `leaves` can have non-matching brackets at the head or tail parts.
+    Matching brackets are included.
+    """
+    try:
+        # Start with the first opening bracket and ignore closing brackets before.
+        start_index = next(
+            i for i, l in enumerate(leaves) if l.type in OPENING_BRACKETS
+        )
+    except StopIteration:
+        return set()
+    bracket_stack = []
+    ids = set()
+    for i in range(start_index, len(leaves)):
+        leaf = leaves[i]
+        if leaf.type in OPENING_BRACKETS:
+            bracket_stack.append((BRACKET[leaf.type], i))
+        if leaf.type in CLOSING_BRACKETS:
+            if bracket_stack and leaf.type == bracket_stack[-1][0]:
+                _, start = bracket_stack.pop()
+                for j in range(start, i + 1):
+                    ids.add(id(leaves[j]))
+            else:
+                break
+    return ids

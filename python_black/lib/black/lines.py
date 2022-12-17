@@ -44,12 +44,16 @@ class Line:
     should_split_rhs: bool = False
     magic_trailing_comma: Optional[Leaf] = None
 
-    def append(self, leaf: Leaf, preformatted: bool = False) -> None:
+    def append(
+        self, leaf: Leaf, preformatted: bool = False, track_bracket: bool = False
+    ) -> None:
         """Add a new `leaf` to the end of the line.
+
         Unless `preformatted` is True, the `leaf` will receive a new consistent
         whitespace prefix and metadata applied by :class:`BracketTracker`.
         Trailing commas are maybe removed, unpacked for loop variables are
         demoted from being delimiters.
+
         Inline comments are put aside.
         """
         has_value = leaf.type in BRACKETS or bool(leaf.value.strip())
@@ -64,7 +68,7 @@ class Line:
             leaf.prefix += whitespace(
                 leaf, complex_subscript=self.is_complex_subscript(leaf)
             )
-        if self.inside_brackets or not preformatted:
+        if self.inside_brackets or not preformatted or track_bracket:
             self.bracket_tracker.mark(leaf)
             if self.mode.magic_trailing_comma:
                 if self.has_magic_trailing_comma(leaf):
@@ -76,6 +80,7 @@ class Line:
 
     def append_safe(self, leaf: Leaf, preformatted: bool = False) -> None:
         """Like :func:`append()` but disallow invalid standalone comment structure.
+
         Raises ValueError when any `leaf` is appended after a standalone comment
         or when a standalone comment is not the first leaf on the line.
         """
@@ -143,6 +148,7 @@ class Line:
     @property
     def is_class_paren_empty(self) -> bool:
         """Is this a class with no base classes but using parentheses?
+
         Those are unnecessary and should be removed.
         """
         return (
@@ -388,6 +394,7 @@ class Line:
         self, reversed: bool = False
     ) -> Iterator[Tuple[Index, Leaf, int]]:
         """Return an enumeration of leaves with their length.
+
         Stops prematurely on multiline strings and standalone comments.
         """
         op = cast(
@@ -435,40 +442,86 @@ class Line:
 
 
 @dataclass
+class LinesBlock:
+    """Class that holds information about a block of formatted lines.
+
+    This is introduced so that the EmptyLineTracker can look behind the standalone
+    comments and adjust their empty lines for class or def lines.
+    """
+
+    mode: Mode
+    previous_block: Optional["LinesBlock"]
+    original_line: Line
+    before: int = 0
+    content_lines: List[str] = field(default_factory=list)
+    after: int = 0
+
+    def all_lines(self) -> List[str]:
+        empty_line = str(Line(mode=self.mode))
+        return (
+            [empty_line * self.before] + self.content_lines + [empty_line * self.after]
+        )
+
+
+@dataclass
 class EmptyLineTracker:
     """Provides a stateful method that returns the number of potential extra
     empty lines needed before and after the currently processed line.
+
     Note: this tracker works on lines that haven't been split yet.  It assumes
     the prefix of the first leaf consists of optional newlines.  Those newlines
     are consumed by `maybe_empty_lines()` and included in the computation.
     """
 
-    is_pyi: bool = False
+    mode: Mode
     previous_line: Optional[Line] = None
-    previous_after: int = 0
+    previous_block: Optional[LinesBlock] = None
     previous_defs: List[int] = field(default_factory=list)
+    semantic_leading_comment: Optional[LinesBlock] = None
 
-    def maybe_empty_lines(self, current_line: Line) -> Tuple[int, int]:
+    def maybe_empty_lines(self, current_line: Line) -> LinesBlock:
         """Return the number of extra empty lines before and after the `current_line`.
+
         This is for separating `def`, `async def` and `class` with extra empty
         lines (two on module-level).
         """
         before, after = self._maybe_empty_lines(current_line)
+        previous_after = self.previous_block.after if self.previous_block else 0
         before = (
             # Black should not insert empty lines at the beginning
             # of the file
             0
             if self.previous_line is None
-            else before - self.previous_after
+            else before - previous_after
         )
-        self.previous_after = after
+        block = LinesBlock(
+            mode=self.mode,
+            previous_block=self.previous_block,
+            original_line=current_line,
+            before=before,
+            after=after,
+        )
+
+        # Maintain the semantic_leading_comment state.
+        if current_line.is_comment:
+            if self.previous_line is None or (
+                not self.previous_line.is_decorator
+                # `or before` means this comment already has an empty line before
+                and (not self.previous_line.is_comment or before)
+                and (self.semantic_leading_comment is None or before)
+            ):
+                self.semantic_leading_comment = block
+        elif not current_line.is_decorator:
+            self.semantic_leading_comment = None
+
         self.previous_line = current_line
-        return before, after
+        self.previous_block = block
+        return block
 
     def _maybe_empty_lines(self, current_line: Line) -> Tuple[int, int]:
         max_allowed = 1
         if current_line.depth == 0:
-            max_allowed = 1 if self.is_pyi else 2
+            max_allowed = 1 if self.mode.is_pyi else 2
         if current_line.leaves:
             # Consume the first leaf's extra newlines.
             first_leaf = current_line.leaves[0]
@@ -479,7 +532,7 @@ class EmptyLineTracker:
             before = 0
         depth = current_line.depth
         while self.previous_defs and self.previous_defs[-1] >= depth:
-            if self.is_pyi:
+            if self.mode.is_pyi:
                 assert self.previous_line is not None
                 if depth and not current_line.is_def and self.previous_line.is_def:
                     # Empty lines between attributes and methods should be preserved.
@@ -547,7 +600,7 @@ class EmptyLineTracker:
             return 0, 0
 
         if self.previous_line.is_decorator:
-            if self.is_pyi and current_line.is_stub_class:
+            if self.mode.is_pyi and current_line.is_stub_class:
                 # Insert an empty line after a decorated stub class
                 return 0, 1
 
@@ -558,14 +611,27 @@ class EmptyLineTracker:
         ):
             return 0, 0
 
+        comment_to_add_newlines: Optional[LinesBlock] = None
         if (
             self.previous_line.is_comment
             and self.previous_line.depth == current_line.depth
             and before == 0
         ):
-            return 0, 0
+            slc = self.semantic_leading_comment
+            if (
+                Preview.empty_lines_before_class_or_def_with_leading_comments
+                in current_line.mode
+                and slc is not None
+                and slc.previous_block is not None
+                and not slc.previous_block.original_line.is_class
+                and not slc.previous_block.original_line.opens_block
+                and slc.before <= 1
+            ):
+                comment_to_add_newlines = slc
+            else:
+                return 0, 0
 
-        if self.is_pyi:
+        if self.mode.is_pyi:
             if current_line.is_class or self.previous_line.is_class:
                 if self.previous_line.depth < current_line.depth:
                     newlines = 0
@@ -593,6 +659,13 @@ class EmptyLineTracker:
                 newlines = 0
         else:
             newlines = 1 if current_line.depth else 2
+        if comment_to_add_newlines is not None:
+            previous_block = comment_to_add_newlines.previous_block
+            if previous_block is not None:
+                comment_to_add_newlines.before = (
+                    max(comment_to_add_newlines.before, newlines) - previous_block.after
+                )
+                newlines = 0
         return newlines, 0
 
 
@@ -610,10 +683,12 @@ def append_leaves(
     """
     Append leaves (taken from @old_line) to @new_line, making sure to fix the
     underlying Node structure where appropriate.
+
     All of the leaves in @leaves are duplicated. The duplicates are then
     appended to @new_line and used to replace their originals in the underlying
     Node structure. Any comments attached to the old leaves are reattached to
     the new leaves.
+
     Pre-conditions:
         set(@leaves) is a subset of set(@old_line.leaves).
     """
@@ -628,6 +703,7 @@ def append_leaves(
 
 def is_line_short_enough(line: Line, *, line_length: int, line_str: str = "") -> bool:
     """Return True if `line` is no longer than `line_length`.
+
     Uses the provided `line_str` rendering, if any, otherwise computes a new one.
     """
     if not line_str:
@@ -641,6 +717,7 @@ def is_line_short_enough(line: Line, *, line_length: int, line_str: str = "") ->
 
 def can_be_split(line: Line) -> bool:
     """Return False if the line cannot be split *for sure*.
+
     This is not an exhaustive search but a cheap heuristic that we can use to
     avoid some unfortunate formattings (mostly around wrapping unsplittable code
     in unnecessary parentheses).
@@ -679,6 +756,7 @@ def can_omit_invisible_parens(
     line_length: int,
 ) -> bool:
     """Does `line` have a shape safe to reformat without optional parens around it?
+
     Returns True for only a subset of potentially nice looking formattings but
     the point is to not return false positives that end up producing lines that
     are too long.
@@ -784,6 +862,7 @@ def _can_omit_closing_paren(line: Line, *, last: Leaf, line_length: int) -> bool
 
 def line_to_string(line: Line) -> str:
     """Returns the string representation of @line.
+
     WARNING: This is known to be computationally expensive.
     """
     return str(line).strip("\n")

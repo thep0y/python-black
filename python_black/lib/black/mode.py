@@ -147,13 +147,19 @@ class Preview(Enum):
     """Individual preview style features."""
 
     annotation_parens = auto()
+    empty_lines_before_class_or_def_with_leading_comments = auto()
+    handle_trailing_commas_in_head = auto()
     long_docstring_quotes_on_newline = auto()
     normalize_docstring_quotes_and_prefixes_properly = auto()
     one_element_subscript = auto()
+    prefer_splitting_right_hand_side_of_assignments = auto()
     remove_block_trailing_newline = auto()
     remove_redundant_parens = auto()
+    # NOTE: string_processing requires wrap_long_dict_values_in_parens
+    # for https://github.com/psf/black/issues/3117 to be fixed.
     string_processing = auto()
     skip_magic_trailing_comma_in_subscript = auto()
+    wrap_long_dict_values_in_parens = auto()
 
 
 class Deprecated(UserWarning):
@@ -176,14 +182,17 @@ class Mode:
     def __post_init__(self) -> None:
         if self.experimental_string_processing:
             warn(
-                "`experimental string processing` has been included in `preview`"
-                " and deprecated. Use `preview` instead.",
+                (
+                    "`experimental string processing` has been included in `preview`"
+                    " and deprecated. Use `preview` instead."
+                ),
                 Deprecated,
             )
 
     def __contains__(self, feature: Preview) -> bool:
         """
         Provide `Preview.FEATURE in Mode` syntax that mirrors the ``preview`` flag.
+
         The argument is not checked and features are not differentiated.
         They only exist to make development easier by clarifying intent.
         """

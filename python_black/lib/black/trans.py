@@ -60,6 +60,7 @@ TMatchResult = TResult[Index]
 
 def TErr(err_msg: str) -> Err[CannotTransform]:
     """(T)ransform Err
+
     Convenience function used when working with the TResult type.
     """
     cant_transform = CannotTransform(err_msg)
@@ -149,17 +150,22 @@ class StringTransformer(ABC):
     An implementation of the Transformer protocol that relies on its
     subclasses overriding the template methods `do_match(...)` and
     `do_transform(...)`.
+
     This Transformer works exclusively on strings (for example, by merging
     or splitting them).
+
     The following sections can be found among the docstrings of each concrete
     StringTransformer subclass.
+
     Requirements:
         Which requirements must be met of the given Line for this
         StringTransformer to be applied?
+
     Transformations:
         If the given Line meets all of the above requirements, which string
         transformations can you expect to be applied to it by this
         StringTransformer?
+
     Collaborations:
         What contractual agreements does this StringTransformer have with other
         StringTransfomers? Such collaborations should be eliminated/minimized
@@ -195,6 +201,7 @@ class StringTransformer(ABC):
             the form of the given Line, but in some cases it is difficult to
             know whether or not a Line meets the StringTransformer's
             requirements until the transformation is already midway.
+
         Side Effects:
             This method should NOT mutate @line directly, but it MAY mutate the
             Line's underlying Node structure. (WARNING: If the underlying Node
@@ -206,6 +213,7 @@ class StringTransformer(ABC):
         """
         StringTransformer instances have a call signature that mirrors that of
         the Transformer type.
+
         Raises:
             CannotTransform(...) if the concrete StringTransformer class is unable
             to transform @line.
@@ -239,7 +247,9 @@ class StringTransformer(ABC):
 @dataclass
 class CustomSplit:
     """A custom (i.e. manual) string split.
+
     A single CustomSplit instance represents a single substring.
+
     Examples:
         Consider the following string:
         ```
@@ -247,6 +257,7 @@ class CustomSplit:
         " This is a custom"
         f" string {split}."
         ```
+
         This string will correspond to the following three CustomSplit instances:
         ```
         CustomSplit(False, 16)
@@ -285,6 +296,7 @@ class CustomSplitMapMixin:
         self, string: str, custom_splits: Iterable[CustomSplit]
     ) -> None:
         """Custom Split Map Setter Method
+
         Side Effects:
             Adds a mapping from @string to the custom splits @custom_splits.
         """
@@ -293,11 +305,13 @@ class CustomSplitMapMixin:
 
     def pop_custom_splits(self, string: str) -> List[CustomSplit]:
         """Custom Split Map Getter Method
+
         Returns:
             * A list of the custom splits that are mapped to @string, if any
             exist.
                 OR
             * [], otherwise.
+
         Side Effects:
             Deletes the mapping between @string and its associated custom
             splits (which are returned to the caller).
@@ -320,16 +334,20 @@ class CustomSplitMapMixin:
 
 class StringMerger(StringTransformer, CustomSplitMapMixin):
     """StringTransformer that merges strings together.
+
     Requirements:
         (A) The line contains adjacent strings such that ALL of the validation checks
         listed in StringMerger.__validate_msg(...)'s docstring pass.
             OR
         (B) The line contains a string which uses line continuation backslashes.
+
     Transformations:
         Depending on which of the two requirements above where met, either:
+
         (A) The string group associated with the target string is merged.
             OR
         (B) All line-continuation backslashes are removed from the target string.
+
     Collaborations:
         StringMerger provides custom split information to StringSplitter.
     """
@@ -386,6 +404,7 @@ class StringMerger(StringTransformer, CustomSplitMapMixin):
         """
         Merge strings that were split across multiple lines using
         line-continuation backslashes.
+
         Returns:
             Ok(new_line), if @line contains backslash line-continuation
             characters.
@@ -418,6 +437,7 @@ class StringMerger(StringTransformer, CustomSplitMapMixin):
         """
         Merges string group (i.e. set of adjacent strings) where the first
         string in the group is `line.leaves[string_idx]`.
+
         Returns:
             Ok(new_line), if ALL of the validation checks found in
             __validate_msg(...) pass.
@@ -446,8 +466,10 @@ class StringMerger(StringTransformer, CustomSplitMapMixin):
 
         def make_naked(string: str, string_prefix: str) -> str:
             """Strip @string (i.e. make it a "naked" string)
+
             Pre-conditions:
                 * assert_is_leaf_string(@string)
+
             Returns:
                 A string that is identical to @string except that
                 @string_prefix has been stripped, the surrounding QUOTE
@@ -571,7 +593,9 @@ class StringMerger(StringTransformer, CustomSplitMapMixin):
     @staticmethod
     def _validate_msg(line: Line, string_idx: int) -> TResult[None]:
         """Validate (M)erge (S)tring (G)roup
+
         Transform-time string validation logic for __merge_string_group(...).
+
         Returns:
             * Ok(None), if ALL validation checks (listed below) pass.
                 OR
@@ -650,6 +674,7 @@ class StringMerger(StringTransformer, CustomSplitMapMixin):
 
 class StringParenStripper(StringTransformer):
     """StringTransformer that strips surrounding parentheses from strings.
+
     Requirements:
         The line contains a string which is surrounded by parentheses and:
             - The target string is NOT the only argument to a function call.
@@ -657,8 +682,10 @@ class StringParenStripper(StringTransformer):
             - If the target string contains a PERCENT, the brackets are not
               preceded or followed by an operator with higher precedence than
               PERCENT.
+
     Transformations:
         The parentheses mentioned in the 'Requirements' section are stripped.
+
     Collaborations:
         StringParenStripper has its own inherent usefulness, but it is also
         relied on to clean up the parentheses created by StringParenWrapper (in
@@ -798,6 +825,7 @@ class BaseStringSplitter(StringTransformer):
     Abstract class for StringTransformers which transform a Line's strings by splitting
     them or placing them on their own lines where necessary to avoid going over
     the configured line length.
+
     Requirements:
         * The target string value is responsible for the line going over the
         line length limit. It follows that after all of black's other line
@@ -831,7 +859,9 @@ class BaseStringSplitter(StringTransformer):
         """
         BaseStringSplitter asks its clients to override this method instead of
         `StringTransformer.do_match(...)`.
+
         Follows the same protocol as `StringTransformer.do_match(...)`.
+
         Refer to `help(StringTransformer.do_match)` for more information.
         """
 
@@ -852,6 +882,7 @@ class BaseStringSplitter(StringTransformer):
         Checks that @line meets all of the requirements listed in this classes'
         docstring. Refer to `help(BaseStringSplitter)` for a detailed
         description of those requirements.
+
         Returns:
             * Ok(None), if ALL of the requirements are met.
                 OR
@@ -894,9 +925,11 @@ class BaseStringSplitter(StringTransformer):
         Calculates the max string length used when attempting to determine
         whether or not the target string is responsible for causing the line to
         go over the line length limit.
+
         WARNING: This method is tightly coupled to both StringSplitter and
         (especially) StringParenWrapper. There is probably a better way to
         accomplish what is being done here.
+
         Returns:
             max_string_length: such that `line.leaves[string_idx].value >
             max_string_length` implies that the target string IS responsible
@@ -1011,33 +1044,19 @@ class BaseStringSplitter(StringTransformer):
         if LL[0].type != token.STRING:
             return None
 
-        matching_nodes = [
-            syms.listmaker,
-            syms.dictsetmaker,
-            syms.testlist_gexp,
-        ]
-        # If the string is an immediate child of a list/set/tuple literal...
-        if (
-            parent_type(LL[0]) in matching_nodes
-            or parent_type(LL[0].parent) in matching_nodes
+        # If the string is surrounded by commas (or is the first/last child)...
+        prev_sibling = LL[0].prev_sibling
+        next_sibling = LL[0].next_sibling
+        if not prev_sibling and not next_sibling and parent_type(LL[0]) == syms.atom:
+            # If it's an atom string, we need to check the parent atom's siblings.
+            parent = LL[0].parent
+            assert parent is not None  # For type checkers.
+            prev_sibling = parent.prev_sibling
+            next_sibling = parent.next_sibling
+        if (not prev_sibling or prev_sibling.type == token.COMMA) and (
+            not next_sibling or next_sibling.type == token.COMMA
         ):
-            # And the string is surrounded by commas (or is the first/last child)...
-            prev_sibling = LL[0].prev_sibling
-            next_sibling = LL[0].next_sibling
-            if (
-                not prev_sibling
-                and not next_sibling
-                and parent_type(LL[0]) == syms.atom
-            ):
-                # If it's an atom string, we need to check the parent atom's siblings.
-                parent = LL[0].parent
-                assert parent is not None  # For type checkers.
-                prev_sibling = parent.prev_sibling
-                next_sibling = parent.next_sibling
-            if (not prev_sibling or prev_sibling.type == token.COMMA) and (
-                not next_sibling or next_sibling.type == token.COMMA
-            ):
-                return 0
+            return 0
 
         return None
 
@@ -1097,28 +1116,35 @@ class StringSplitter(BaseStringSplitter, CustomSplitMapMixin):
     """
     StringTransformer that splits "atom" strings (i.e. strings which exist on
     lines by themselves).
+
     Requirements:
         * The line consists ONLY of a single string (possibly prefixed by a
         string operator [e.g. '+' or '==']), MAYBE a string trailer, and MAYBE
         a trailing comma.
             AND
         * All of the requirements listed in BaseStringSplitter's docstring.
+
     Transformations:
         The string mentioned in the 'Requirements' section is split into as
         many substrings as necessary to adhere to the configured line length.
+
         In the final set of substrings, no substring should be smaller than
         MIN_SUBSTR_SIZE characters.
+
         The string will ONLY be split on spaces (i.e. each new substring should
         start with a space). Note that the string will NOT be split on a space
         which is escaped with a backslash.
+
         If the string is an f-string, it will NOT be split in the middle of an
         f-expression (e.g. in f"FooBar: {foo() if x else bar()}", {foo() if x
         else bar()} is an f-expression).
+
         If the string that is being split has an associated set of custom split
         records and those custom splits will NOT result in any line going over
         the configured line length, those custom splits are used. Otherwise the
         string is split as late as possible (from left-to-right) while still
         adhering to the transformation rules listed above.
+
     Collaborations:
         StringSplitter relies on StringMerger to construct the appropriate
         CustomSplit objects and add them to the custom split map.
@@ -1452,6 +1478,7 @@ class StringSplitter(BaseStringSplitter, CustomSplitMapMixin):
         """
         This method contains the algorithm that StringSplitter uses to
         determine which character to split each string at.
+
         Args:
             @string: The substring that we are attempting to split.
             @max_break_idx: The ideal break index. We will return this value if it
@@ -1459,9 +1486,11 @@ class StringSplitter(BaseStringSplitter, CustomSplitMapMixin):
             doesn't we will try to find the closest index BELOW @max_break_idx
             that does. If that fails, we will expand our search by also
             considering all valid indices ABOVE @max_break_idx.
+
         Pre-Conditions:
             * assert_is_leaf_string(@string)
             * 0 <= @max_break_idx < len(@string)
+
         Returns:
             break_idx, if an index is able to be found that meets all of the
             conditions listed in the 'Transformations' section of this classes'
@@ -1537,6 +1566,7 @@ class StringSplitter(BaseStringSplitter, CustomSplitMapMixin):
         """
         Pre-Conditions:
             * assert_is_leaf_string(@string)
+
         Returns:
             * If @string is an f-string that contains no f-expressions, we
             return a string identical to @string except that the 'f' prefix
@@ -1574,9 +1604,11 @@ class StringSplitter(BaseStringSplitter, CustomSplitMapMixin):
 class StringParenWrapper(BaseStringSplitter, CustomSplitMapMixin):
     """
     StringTransformer that wraps strings in parens and then splits at the LPAR.
+
     Requirements:
         All of the requirements listed in BaseStringSplitter's docstring in
         addition to the requirements listed below:
+
         * The line is a return/yield statement, which returns/yields a string.
             OR
         * The line is part of a ternary expression (e.g. `x = y if cond else
@@ -1592,29 +1624,36 @@ class StringParenWrapper(BaseStringSplitter, CustomSplitMapMixin):
         * The line is a dictionary key assignment where some valid key is being
         assigned the value of some string.
             OR
+        * The line is an lambda expression and the value is a string.
+            OR
         * The line starts with an "atom" string that prefers to be wrapped in
-        parens. It's preferred to be wrapped when it's is an immediate child of
-        a list/set/tuple literal, AND the string is surrounded by commas (or is
-        the first/last child).
+        parens. It's preferred to be wrapped when the string is surrounded by
+        commas (or is the first/last child).
+
     Transformations:
         The chosen string is wrapped in parentheses and then split at the LPAR.
+
         We then have one line which ends with an LPAR and another line that
         starts with the chosen string. The latter line is then split again at
         the RPAR. This results in the RPAR (and possibly a trailing comma)
         being placed on its own line.
+
         NOTE: If any leaves exist to the right of the chosen string (except
         for a trailing comma, which would be placed after the RPAR), those
         leaves are placed inside the parentheses.  In effect, the chosen
         string is not necessarily being "wrapped" by parentheses. We can,
         however, count on the LPAR being placed directly before the chosen
         string.
+
         In other words, StringParenWrapper creates "atom" strings. These
         can then be split again by StringSplitter, if necessary.
+
     Collaborations:
         In the event that a string line split by StringParenWrapper is
         changed such that it no longer needs to be given its own line,
         StringParenWrapper relies on StringParenStripper to clean up the
         parentheses it created.
+
         For "atom" strings that prefers to be wrapped in parens, it requires
         StringSplitter to hold the split until the string is wrapped in parens.
     """
@@ -1632,7 +1671,7 @@ class StringParenWrapper(BaseStringSplitter, CustomSplitMapMixin):
             or self._else_match(LL)
             or self._assert_match(LL)
             or self._assign_match(LL)
-            or self._dict_match(LL)
+            or self._dict_or_lambda_match(LL)
             or self._prefer_paren_wrap_match(LL)
         )
 
@@ -1790,22 +1829,23 @@ class StringParenWrapper(BaseStringSplitter, CustomSplitMapMixin):
         return None
 
     @staticmethod
-    def _dict_match(LL: List[Leaf]) -> Optional[int]:
+    def _dict_or_lambda_match(LL: List[Leaf]) -> Optional[int]:
         """
         Returns:
             string_idx such that @LL[string_idx] is equal to our target (i.e.
             matched) string, if this line matches the dictionary key assignment
-            statement requirements listed in the 'Requirements' section of this
-            classes' docstring.
+            statement or lambda expression requirements listed in the
+            'Requirements' section of this classes' docstring.
                 OR
             None, otherwise.
         """
-        # If this line is apart of a dictionary key assignment...
-        if syms.dictsetmaker in [parent_type(LL[0]), parent_type(LL[0].parent)]:
+        # If this line is a part of a dictionary key assignment or lambda expression...
+        parent_types = [parent_type(LL[0]), parent_type(LL[0].parent)]
+        if syms.dictsetmaker in parent_types or syms.lambdef in parent_types:
             is_valid_index = is_valid_index_factory(LL)
 
             for i, leaf in enumerate(LL):
-                # We MUST find a colon...
+                # We MUST find a colon, it can either be dict's or lambda's colon...
                 if leaf.type == token.COLON:
                     idx = i + 2 if is_empty_par(LL[i + 1]) else i + 1
 
@@ -1900,6 +1940,25 @@ class StringParenWrapper(BaseStringSplitter, CustomSplitMapMixin):
                     f" (left_leaves={left_leaves}, right_leaves={right_leaves})"
                 )
                 old_rpar_leaf = right_leaves.pop()
+            elif right_leaves and right_leaves[-1].type == token.RPAR:
+                # Special case for lambda expressions as dict's value, e.g.:
+                #     my_dict = {
+                #        "key": lambda x: f"formatted: {x},
+                #     }
+                # After wrapping the dict's value with parentheses, the string is
+                # followed by a RPAR but its opening bracket is lambda's, not
+                # the string's:
+                #        "key": (lambda x: f"formatted: {x}),
+                opening_bracket = right_leaves[-1].opening_bracket
+                if opening_bracket is not None and opening_bracket in left_leaves:
+                    index = left_leaves.index(opening_bracket)
+                    if (
+                        index > 0
+                        and index < len(left_leaves) - 1
+                        and left_leaves[index - 1].type == token.COLON
+                        and left_leaves[index + 1].value == "lambda"
+                    ):
+                        right_leaves.pop()
 
             append_leaves(string_line, line, right_leaves)
 
@@ -1932,18 +1991,22 @@ class StringParser:
     either non-existent, an old-style formatting sequence (e.g. `% varX` or `%
     (varX, varY)`), or a method-call / attribute access (e.g. `.format(varX,
     varY)`).
+
     NOTE: A new StringParser object MUST be instantiated for each string
     trailer we need to parse.
+
     Examples:
         We shall assume that `line` equals the `Line` object that corresponds
         to the following line of python code:
         ```
         x = "Some {}.".format("String") + some_other_string
         ```
+
         Furthermore, we will assume that `string_idx` is some index such that:
         ```
         assert line.leaves[string_idx].value == "Some {}."
         ```
+
         The following code snippet then holds:
         ```
         string_parser = StringParser()
@@ -1998,6 +2061,7 @@ class StringParser:
         """
         Pre-conditions:
             * @leaves[@string_idx].type == token.STRING
+
         Returns:
             The index directly after the last leaf which is apart of the string
             trailer, if a "trailer" exists.
@@ -2020,6 +2084,7 @@ class StringParser:
             be `line.leaves[i + 1]`).
             * On the next call to this function, the leaf parameter passed in
             MUST be the leaf directly following @leaf.
+
         Returns:
             True iff @leaf is apart of the string's trailer.
         """
@@ -2067,10 +2132,12 @@ def insert_str_child_factory(string_leaf: Leaf) -> Callable[[LN], None]:
     Factory for a convenience function that is used to orphan @string_leaf
     and then insert multiple new leaves into the same part of the node
     structure that @string_leaf had originally occupied.
+
     Examples:
         Let `string_leaf = Leaf(token.STRING, '"foo"')` and `N =
         string_leaf.parent`. Assume the node `N` has the following
         original structure:
+
         Node(
             expr_stmt, [
                 Leaf(NAME, 'x'),
@@ -2078,18 +2145,24 @@ def insert_str_child_factory(string_leaf: Leaf) -> Callable[[LN], None]:
                 Leaf(STRING, '"foo"'),
             ]
         )
+
         We then run the code snippet shown below.
         ```
         insert_str_child = insert_str_child_factory(string_leaf)
+
         lpar = Leaf(token.LPAR, '(')
         insert_str_child(lpar)
+
         bar = Leaf(token.STRING, '"bar"')
         insert_str_child(bar)
+
         rpar = Leaf(token.RPAR, ')')
         insert_str_child(rpar)
         ```
+
         After which point, it follows that `string_leaf.parent is None` and
         the node `N` now has the following structure:
+
         Node(
             expr_stmt, [
                 Leaf(NAME, 'x'),
@@ -2120,9 +2193,12 @@ def is_valid_index_factory(seq: Sequence[Any]) -> Callable[[int], bool]:
     Examples:
         ```
         my_list = [1, 2, 3]
+
         is_valid_index = is_valid_index_factory(my_list)
+
         assert is_valid_index(0)
         assert is_valid_index(2)
+
         assert not is_valid_index(3)
         assert not is_valid_index(-1)
         ```
