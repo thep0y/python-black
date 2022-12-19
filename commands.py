@@ -4,11 +4,10 @@
 # @Email:     thepoy@163.com
 # @File Name: commands.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-11-22 22:48:41
+# @Modified:  2022-12-17 19:29:30
 
 import sublime
 import sublime_plugin
-
 
 from os import path
 from typing import Any, Dict, List, Union
@@ -23,8 +22,11 @@ from .python_black.utils import (
     get_project_settings,
     set_mode,
 )
+from .python_black.lib.black import __version__
 
 logger = child_logger(__name__)
+
+logger.info("black version: %s", __version__)
 
 
 class BlackCommand(sublime_plugin.TextCommand):

@@ -12,7 +12,7 @@ from .nodes import (
     is_string_token,
     is_number_token,
 )
-from .lines import Line, EmptyLineTracker
+from .lines import Line, EmptyLineTracker, LinesBlock
 from .linegen import transform_line, LineGenerator, LN
 from .comments import normalize_fmt_off
 from .mode import (
@@ -59,7 +59,7 @@ class WriteBack(Enum):
         return cls.DIFF if diff else cls.YES
 
 
-def format_str(src_contents: str, *, mode: Mode) -> FileContent:
+def format_str(src_contents: str, *, mode: Mode) -> str:
     """Reformat a string and return new contents.
 
     `mode` determines formatting options, such as how many characters per line are
@@ -100,7 +100,7 @@ def format_str(src_contents: str, *, mode: Mode) -> FileContent:
 
 def _format_str_once(src_contents: str, *, mode: Mode) -> str:
     src_node = lib2to3_parse(src_contents.lstrip(), mode.target_versions)
-    dst_contents = []
+    dst_blocks: List[LinesBlock] = []
     if mode.target_versions:
         versions = mode.target_versions
     else:
@@ -109,22 +109,32 @@ def _format_str_once(src_contents: str, *, mode: Mode) -> str:
 
     normalize_fmt_off(src_node, preview=mode.preview)
     lines = LineGenerator(mode=mode)
-    elt = EmptyLineTracker(is_pyi=mode.is_pyi)
-    empty_line = Line(mode=mode)
-    after = 0
+    elt = EmptyLineTracker(mode=mode)
     split_line_features = {
         feature
         for feature in {Feature.TRAILING_COMMA_IN_CALL, Feature.TRAILING_COMMA_IN_DEF}
         if supports_feature(versions, feature)
     }
+    block: Optional[LinesBlock] = None
     for current_line in lines.visit(src_node):
-        dst_contents.append(str(empty_line) * after)
-        before, after = elt.maybe_empty_lines(current_line)
-        dst_contents.append(str(empty_line) * before)
+        block = elt.maybe_empty_lines(current_line)
+        dst_blocks.append(block)
         for line in transform_line(
             current_line, mode=mode, features=split_line_features
         ):
-            dst_contents.append(str(line))
+            block.content_lines.append(str(line))
+    if dst_blocks:
+        dst_blocks[-1].after = 0
+    dst_contents = []
+    for block in dst_blocks:
+        dst_contents.extend(block.all_lines())
+    if mode.preview and not dst_contents:
+        # Use decode_bytes to retrieve the correct source newline (CRLF or LF),
+        # and check if normalized_content has more than one line
+        normalized_content, _, newline = decode_bytes(src_contents.encode("utf-8"))
+        if "\n" in normalized_content:
+            return newline
+        return ""
     return "".join(dst_contents)
 
 
