@@ -8,9 +8,16 @@
    //    - "smart": Automatic formatting is only enabled if there is a `black` section in the project's `pyproject.toml`
    "format_on_save": "on",
    // Black [OPTIONS]
-   "line_length": "88",
-   "skip_source_first_line": false,
-   "skip_string_normalization": false,
-   "skip_magic_trailing_comma": false,
-   "experimental_string_processing": false
+   "options": {
+      "target_version": [],
+      "line_length": 88,
+      "string_normalization": true,
+      "is_pyi": false,
+      "is_ipynb": false,
+      "skip_source_first_line": false,
+      "magic_trailing_comma": true,
+      "experimental_string_processing": false,
+      "python_cell_magics": [],
+      "preview": false
+   }
 }
