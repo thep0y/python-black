@@ -30,7 +30,8 @@ logger.info("black version: %s", __version__)
 
 class BlackCommand(sublime_plugin.TextCommand):
     def is_visible(self, *args):
-        return True
+        region = self.view.sel()[0]
+        return self.view.match_selector(region.b, "source.python")
 
     def get_source(self, use_selection: bool):
         region = self.view.sel()[0]
@@ -64,14 +65,6 @@ class BlackCommand(sublime_plugin.TextCommand):
             view=self.view,
             smart_mode=smart_mode,
         )
-
-
-class BlackAllFilesCommand(sublime_plugin.TextCommand):
-    # TODO 格式化项目中所有 py 文件
-    # 应该传入文件路径，而不是文件内容
-    # 这里还用 TextCommand ？还是换 WindowCommand？
-    def run(self, edit):
-        sublime.error_message("this feature is not yet complete")
 
 
 class BlackCreateConfiguration(sublime_plugin.WindowCommand):
