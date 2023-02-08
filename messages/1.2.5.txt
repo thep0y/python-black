@@ -1,0 +1,11 @@
+=> 1.2.5
+
+# Features
+
+# Fixes and Improvements
+
+- Upgrade black to 23.1.0
+
+- Upgrade pathspec to 0.11.0
+
+- Upgrade platformdirs to 3.0.0

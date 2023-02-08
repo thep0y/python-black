@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: commands.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2023-02-08 12:23:02
+# @Modified:  2023-02-08 13:31:30
 
 import sublime
 import sublime_plugin
@@ -30,7 +30,7 @@ from .python_black.lib.appdirs import __version__ as appdirs_version
 logger = child_logger(__name__)
 
 logger.info(
-    "black version: %s, pathspec version: %s, platformdirs version: %s, tomli version: %s, appdirs version: %s",
+    "versions: black=%s, pathspec=%s, platformdirs=%s, tomli=%s, appdirs=%s",
     black_version,
     pathspec_version,
     platformdirs_version,
