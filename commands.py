@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: commands.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-12-17 19:29:30
+# @Modified:  2023-02-08 13:31:30
 
 import sublime
 import sublime_plugin
@@ -22,16 +22,28 @@ from .python_black.utils import (
     get_project_settings,
     set_mode,
 )
-from .python_black.lib.black import __version__
+from .python_black.lib.black import __version__ as black_version
+from .python_black.lib.pathspec import __version__ as pathspec_version
+from .python_black.lib.platformdirs import __version__ as platformdirs_version
+from .python_black.lib.tomli import __version__ as tomli_version
+from .python_black.lib.appdirs import __version__ as appdirs_version
 
 logger = child_logger(__name__)
 
-logger.info("black version: %s", __version__)
+logger.info(
+    "versions: black=%s, pathspec=%s, platformdirs=%s, tomli=%s, appdirs=%s",
+    black_version,
+    pathspec_version,
+    platformdirs_version,
+    tomli_version,
+    appdirs_version,
+)
 
 
 class BlackCommand(sublime_plugin.TextCommand):
     def is_visible(self, *args):
-        return True
+        region = self.view.sel()[0]
+        return self.view.match_selector(region.b, "source.python")
 
     def get_source(self, use_selection: bool):
         region = self.view.sel()[0]
@@ -75,14 +87,6 @@ class BlackCommand(sublime_plugin.TextCommand):
             package_settings=package_settings,
             project_settings=project_settings,
         )
-
-
-class BlackAllFilesCommand(sublime_plugin.TextCommand):
-    # TODO 格式化项目中所有 py 文件
-    # 应该传入文件路径，而不是文件内容
-    # 这里还用 TextCommand ？还是换 WindowCommand？
-    def run(self, edit):
-        sublime.error_message("this feature is not yet complete")
 
 
 class BlackCreateConfiguration(sublime_plugin.WindowCommand):

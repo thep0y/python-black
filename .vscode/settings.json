@@ -1,0 +1,5 @@
+{
+  "psi-header.changes-tracking": {
+    "excludeGlob": ["**/lib/**/*.py"]
+  }
+}

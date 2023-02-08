@@ -1,5 +1,0 @@
-=> 1.2.4
-
-# Features
-
-- Update `black` to version 22.12.0
