@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: commands.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-12-17 19:29:30
+# @Modified:  2023-02-08 12:10:46
 
 import sublime
 import sublime_plugin
@@ -21,11 +21,12 @@ from .python_black.black import black_format
 from .python_black.mode import Mode
 from .python_black.log import child_logger
 from .python_black.utils import get_mode, set_mode
-from .python_black.lib.black import __version__
+from .python_black.lib.black import __version__ as black_version
+from .python_black.lib.pathspec._meta import __version__ as pathspec_version
 
 logger = child_logger(__name__)
 
-logger.info("black version: %s", __version__)
+logger.info("black version: %s, pathspec version: %s", black_version, pathspec_version)
 
 
 class BlackCommand(sublime_plugin.TextCommand):
