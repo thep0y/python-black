@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: log.py
 # @Created:   2022-10-29 16:21:52
-# @Modified:  2022-12-17 19:30:15
+# @Modified:  2023-02-08 11:15:37
 
 import os
 import logging
@@ -95,19 +95,16 @@ class Formatter(logging.Formatter):
             return ""
 
         if self.to_file:
-            return (
-                ds.format_with_multiple_styles(
-                    f":{record.lineno}", ds.fc.light_yellow, ds.mode.bold
-                )
-                + " "
+            return ds.format_with_multiple_styles(
+                f":{record.lineno}", ds.fc.light_yellow, ds.mode.bold
             )
 
-        return f":{record.lineno} "
+        return f":{record.lineno}"
 
     @property
     def __connector(self):
         if self.to_file:
-            return ds.format_with_one_style("-", ds.fc.light_cyan) + " "
+            return ds.format_with_one_style(" - ", ds.fc.light_cyan)
 
         return " - "
 
