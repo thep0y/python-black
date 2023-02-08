@@ -25,6 +25,7 @@ class PlatformDirsABC(ABC):
     ):
         """
         Create a new platform directory.
+
         :param appname: See `appname`.
         :param appauthor: See `appauthor`.
         :param version: See `version`.

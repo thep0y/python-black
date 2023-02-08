@@ -96,9 +96,7 @@ class Windows(PlatformDirsABC):
         :return: runtime directory tied to the user, e.g.
          ``%USERPROFILE%\\AppData\\Local\\Temp\\$appauthor\\$appname``
         """
-        path = os.path.normpath(
-            os.path.join(get_win_folder("CSIDL_LOCAL_APPDATA"), "Temp")
-        )
+        path = os.path.normpath(os.path.join(get_win_folder("CSIDL_LOCAL_APPDATA"), "Temp"))
         return self._append_parts(path)
 
 
@@ -135,16 +133,11 @@ def get_win_folder_from_registry(csidl_name: str) -> str:
     }.get(csidl_name)
     if shell_folder_name is None:
         raise ValueError(f"Unknown CSIDL name: {csidl_name}")
-    if (
-        sys.platform != "win32"
-    ):  # only needed for mypy type checker to know that this code runs only on Windows
+    if sys.platform != "win32":  # only needed for mypy type checker to know that this code runs only on Windows
         raise NotImplementedError
     import winreg
 
-    key = winreg.OpenKey(
-        winreg.HKEY_CURRENT_USER,
-        r"Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders",
-    )
+    key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders")
     directory, _ = winreg.QueryValueEx(key, shell_folder_name)
     return str(directory)
 
@@ -161,9 +154,7 @@ def get_win_folder_via_ctypes(csidl_name: str) -> str:
         raise ValueError(f"Unknown CSIDL name: {csidl_name}")
 
     buf = ctypes.create_unicode_buffer(1024)
-    windll = getattr(
-        ctypes, "windll"
-    )  # noqa: B009 # using getattr to avoid false positive with mypy type checker
+    windll = getattr(ctypes, "windll")  # noqa: B009 # using getattr to avoid false positive with mypy type checker
     windll.shell32.SHGetFolderPathW(None, csidl_const, None, 0, buf)
 
     # Downgrade to short path name if it has highbit chars.
