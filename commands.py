@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: commands.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2023-02-08 12:19:45
+# @Modified:  2023-02-08 12:23:02
 
 import sublime
 import sublime_plugin
@@ -24,14 +24,18 @@ from .python_black.utils import get_mode, set_mode
 from .python_black.lib.black import __version__ as black_version
 from .python_black.lib.pathspec import __version__ as pathspec_version
 from .python_black.lib.platformdirs import __version__ as platformdirs_version
+from .python_black.lib.tomli import __version__ as tomli_version
+from .python_black.lib.appdirs import __version__ as appdirs_version
 
 logger = child_logger(__name__)
 
 logger.info(
-    "black version: %s, pathspec version: %s, platformdirs version: %s",
+    "black version: %s, pathspec version: %s, platformdirs version: %s, tomli version: %s, appdirs version: %s",
     black_version,
     pathspec_version,
     platformdirs_version,
+    tomli_version,
+    appdirs_version,
 )
 
 
