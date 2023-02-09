@@ -8,6 +8,8 @@
    //    - "smart": Automatic formatting is only enabled if there is a `black` section in the project's `pyproject.toml`
    "format_on_save": "on",
    // Black [OPTIONS]
+   // The priority of loading options for Black is:
+   // Sublime project settings > Configuration file > Sublime package user settings > Sublime package default settings
    "options": {
       // Python versions that should be supported by Black's output.
       "target_version": [],
