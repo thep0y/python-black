@@ -12,15 +12,16 @@ import sublime_plugin
 from os import path
 from typing import Any, Dict, List, Union
 
-from .python_black.constants import (
-    SETTINGS_FILE_NAME,
-    CONFIGURATION_FILENAME,
-    CONFIGURATION_CONTENTS,
-)
+from .python_black.constants import CONFIGURATION_FILENAME, CONFIGURATION_CONTENTS
 from .python_black.black import black_format
 from .python_black.mode import Mode
 from .python_black.log import child_logger
-from .python_black.utils import get_mode, set_mode
+from .python_black.utils import (
+    get_mode,
+    get_package_settings,
+    get_project_settings,
+    set_mode,
+)
 from .python_black.lib.black import __version__ as black_version
 from .python_black.lib.pathspec import __version__ as pathspec_version
 from .python_black.lib.platformdirs import __version__ as platformdirs_version
@@ -67,6 +68,14 @@ class BlackCommand(sublime_plugin.TextCommand):
         if not isinstance(source, str) and hasattr(source, "decode"):
             source = source.decode(encoding)
 
+        package_settings = get_package_settings().to_dict()
+
+        logger.debug("get package settings: %s", package_settings)
+
+        project_settings = get_project_settings(self.view)
+
+        logger.debug("get project settings: %s", project_settings)
+
         black_format(
             source=source,
             filepath=filename,
@@ -75,6 +84,8 @@ class BlackCommand(sublime_plugin.TextCommand):
             edit=edit,
             view=self.view,
             smart_mode=smart_mode,
+            package_settings=package_settings,
+            project_settings=project_settings,
         )
 
 
@@ -120,7 +131,8 @@ class BlackCreateConfiguration(sublime_plugin.WindowCommand):
 
 class AutoFormatOnSave(sublime_plugin.EventListener):
     def format_on_save_mode(self, view: sublime.View) -> Mode:
-        settings = sublime.load_settings(SETTINGS_FILE_NAME)
+        settings = get_package_settings()
+
         _mode: Union[str, bool] = settings.get("format_on_save", "off")  # type: ignore
 
         window = view.window()

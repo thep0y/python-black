@@ -113,6 +113,8 @@ def really_format(
     code: str,
     config_file: Optional[Path],
     smart_mode: bool,
+    package_settings: Optional[Dict[str, Any]],
+    project_settings: Optional[Dict[str, Any]],
 ) -> Optional[str]:
     """
     Directly call the format function of the `black`
@@ -123,18 +125,31 @@ def really_format(
         src (Tuple[str, ...]): Files path to be formatted.
             Currently only one file can be formatted, so only one path can be passed in
         config_file (Optional[str]): Configuration file to be used (default: {None})
+        package_settings (Optional[Dict[str, Any]]): Package settings
+        project_settings (Optional[Dict[str, Any]]): Project settings
 
     Returns:
         Optional[str]: Formatted code
     """
     default_config: Dict[str, Any] = {
+        "target_version": [],
         "line_length": DEFAULT_LINE_LENGTH,
+        "string_normalization": True,
+        "is_pyi": False,
         "skip_source_first_line": False,
-        "skip_string_normalization": False,
-        "skip_magic_trailing_comma": False,
-        "experimental_string_processing": False,
+        "magic_trailing_comma": True,
         "include": DEFAULT_INCLUDES,
     }
+    # NOTE: Update default config from package settings.
+    if isinstance(package_settings, dict):
+        default_config.update(
+            {
+                k: v
+                for k, v in package_settings.get("options", {}).items()
+                if k in default_config
+                and any([(not isinstance(v, bool) and v), isinstance(v, bool)])
+            }
+        )
 
     if config_file:
         default_config, config_file = read_pyproject_toml(
@@ -154,6 +169,17 @@ def really_format(
     else:
         out("No configuration file found, use the default configuration")
 
+    # NOTE: Update default config from project settings.
+    if isinstance(project_settings, dict):
+        default_config.update(
+            {
+                k: v
+                for k, v in project_settings.get("options", {}).items()
+                if k in default_config
+                and any([(not isinstance(v, bool) and v), isinstance(v, bool)])
+            }
+        )
+
     versions = set()
     target_version_in_config_file = default_config.get("target_version")
     if target_version_in_config_file:
@@ -161,14 +187,14 @@ def really_format(
         if target_version:
             versions = set(target_version)
 
+    logger.info(f"apply black options: {default_config}.")
     mode = Mode(
         target_versions=versions,
-        line_length=int(default_config["line_length"]),
-        is_pyi=False,
+        line_length=default_config["line_length"],
+        string_normalization=default_config["string_normalization"],
+        is_pyi=default_config["is_pyi"],
         skip_source_first_line=default_config["skip_source_first_line"],
-        string_normalization=not default_config["skip_string_normalization"],
-        magic_trailing_comma=not default_config["skip_magic_trailing_comma"],
-        experimental_string_processing=default_config["experimental_string_processing"],
+        magic_trailing_comma=default_config["magic_trailing_comma"],
     )
 
     if code:
@@ -178,7 +204,11 @@ def really_format(
 
 
 def format_by_import_black_package(
-    view: sublime.View, source: str, smart_mode: bool
+    view: sublime.View,
+    source: str,
+    smart_mode: bool,
+    package_settings: Dict[str, Any],
+    project_settings: Dict[str, Any],
 ) -> Optional[str]:
     config_file = find_config_file(view, smart_mode)
 
@@ -188,9 +218,15 @@ def format_by_import_black_package(
         logger.info("smart mode is in use, but the project config file is not found")
         sublime.status_message("black: Project config file is not found")
 
-        return None
+        return
 
-    formatted = really_format(source, config_file, smart_mode=smart_mode)
+    # NOTE: Ignore package and project settings if smart mode is enabled.
+    if smart_mode:
+        package_settings, project_settings = None, None
+
+    formatted = really_format(
+        source, config_file, smart_mode, package_settings, project_settings
+    )
     if not formatted:
         # When formatting the selection, an error may be
         # reported due to indentation issues, but this is
@@ -211,11 +247,15 @@ def black_format(
     edit: sublime.Edit,
     view: sublime.View,
     smart_mode: bool,
+    package_settings: Dict[str, Any],
+    project_settings: Dict[str, Any],
     # preview: bool = False,
 ):
     sublime.status_message("black: Formatting...")
 
-    formatted = format_by_import_black_package(view, source, smart_mode)
+    formatted = format_by_import_black_package(
+        view, source, smart_mode, package_settings, project_settings
+    )
 
     if formatted:
         format_source_file(edit, formatted, filepath, view, region, encoding)

@@ -51,7 +51,7 @@ The optional `use_selection` boolean (defaults to `true`) controls whether to fo
 
 #### 2 Settings
 
-There is only one modifiable property in settings:
+There are some modifiable properties in settings:
 
 ```js
 {
@@ -62,11 +62,41 @@ There is only one modifiable property in settings:
    //    - "on"
    //    - "off"
    //    - "smart": Automatic formatting is only enabled if there is a `black` section in the project's `pyproject.toml`
-   "format_on_save": "on"
+   "format_on_save": "on",
+   // Black [OPTIONS]
+   "options": {
+      "target_version": [],
+      "line_length": 88,
+      "string_normalization": true,
+      "is_pyi": false,
+      "is_ipynb": false,
+      "skip_source_first_line": false,
+      "magic_trailing_comma": true,
+      "experimental_string_processing": false,
+      "python_cell_magics": [],
+      "preview": false
+   }
 }
 ```
 
-This can also be toggled via `Preferences > Package Settings > Python Black > Format On Save`.
+The `format_on_save` can also be toggled via `Preferences > Package Settings > Python Black > Format On Save`.
+
+The Black options can also be configured in sublime-project:
+
+```json
+{
+    "settings":
+    {
+        "python-black": {
+            "options": {
+                "line_length": 127,
+                "string_normalization": false
+            }
+        }
+    }
+}
+
+```
 
 #### 3 Create Black Configuration File
 

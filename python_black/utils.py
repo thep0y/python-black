@@ -14,10 +14,10 @@ import locale
 import difflib
 
 from io import StringIO
-from typing import Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from collections import namedtuple
 from pathlib import Path
-from .constants import SETTINGS_FILE_NAME, STATUS_MESSAGE_TIMEOUT
+from .constants import PACKAGE_NAME, SETTINGS_FILE_NAME, STATUS_MESSAGE_TIMEOUT
 from .log import child_logger
 from .mode import Mode
 from .lib.black.files import find_pyproject_toml
@@ -211,8 +211,26 @@ def out(msg: str):
     return sublime.status_message(msg)
 
 
-def get_mode():
+def get_package_settings() -> sublime.Settings:
     settings = sublime.load_settings(SETTINGS_FILE_NAME)
+    logger.debug("sublime package settings: %s", settings.to_dict())
+    return settings
+
+
+def get_project_settings(view: sublime.View) -> Dict[str, Any]:
+    window = view.window()
+    if not window:
+        return {}
+
+    project_settings: Dict[str, Dict[str, Any]] = (
+        (window.project_data() or {}).get("settings", {}).get(PACKAGE_NAME, {})
+    )
+    logger.debug("sublime project settings: %s", project_settings)
+    return project_settings
+
+
+def get_mode():
+    settings = get_package_settings()
     _mode: Union[str, bool] = settings.get("format_on_save")
     if isinstance(_mode, str):
         mode = Mode(_mode)
