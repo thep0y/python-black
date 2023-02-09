@@ -136,12 +136,8 @@ def really_format(
         "line_length": DEFAULT_LINE_LENGTH,
         "string_normalization": True,
         "is_pyi": False,
-        "is_ipynb": False,
         "skip_source_first_line": False,
         "magic_trailing_comma": True,
-        "experimental_string_processing": False,
-        "python_cell_magics": [],
-        "preview": False,
         "include": DEFAULT_INCLUDES,
     }
     # NOTE: Update default config from package settings.
@@ -197,12 +193,8 @@ def really_format(
         line_length=default_config["line_length"],
         string_normalization=default_config["string_normalization"],
         is_pyi=default_config["is_pyi"],
-        is_ipynb=default_config["is_ipynb"],
         skip_source_first_line=default_config["skip_source_first_line"],
         magic_trailing_comma=default_config["magic_trailing_comma"],
-        experimental_string_processing=default_config["experimental_string_processing"],
-        python_cell_magics=set(default_config["python_cell_magics"]),
-        preview=default_config["preview"],
     )
 
     if code:

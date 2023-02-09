@@ -9,15 +9,17 @@
    "format_on_save": "on",
    // Black [OPTIONS]
    "options": {
+      // Python versions that should be supported by Black's output.
       "target_version": [],
+      // How many characters per line to allow.
       "line_length": 88,
+      // Normalize string quotes or prefixes.
       "string_normalization": true,
+      // Format all input files like typing stubs regardless of file extension (useful when piping source on standard input).
       "is_pyi": false,
-      "is_ipynb": false,
+      // Skip the first line of the source code.
       "skip_source_first_line": false,
+      // Use trailing commas as a reason to split lines.
       "magic_trailing_comma": true,
-      "experimental_string_processing": false,
-      "python_cell_magics": [],
-      "preview": false
    }
 }
