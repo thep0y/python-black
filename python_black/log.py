@@ -30,11 +30,9 @@ class Formatter(logging.Formatter):
         fmt: Optional[str] = None,
         datefmt: Optional[str] = None,
         style: _style = "%",
-        print_position=True,
         to_file=False,
     ):
         self.default_color = "{0}"
-        self.print_position = print_position
 
         self.level_config: Dict[str, Tuple[str, Style]] = {
             "DEBUG": ("DEB", ds.fc.purple),
@@ -88,12 +86,6 @@ class Formatter(logging.Formatter):
         return "" if record.name == "root" else f"{record.name}"
 
     def __position(self, record: logging.LogRecord):
-        if not self.print_position:
-            return ""
-
-        if record.levelname in ["INFO"]:
-            return ""
-
         if self.to_file:
             return ds.format_with_multiple_styles(
                 f":{record.lineno}", ds.fc.light_yellow, ds.mode.bold
@@ -141,7 +133,7 @@ def log_level() -> int:
 
 
 def stream_handler():
-    fmt = Formatter(datefmt=TIME_FORMAT_WITHOUT_DATE, print_position=True)
+    fmt = Formatter(datefmt=TIME_FORMAT_WITHOUT_DATE)
     handler = logging.StreamHandler()
     handler.setFormatter(fmt)
 
@@ -149,7 +141,7 @@ def stream_handler():
 
 
 def file_handler():
-    fmt = Formatter(datefmt=TIME_FORMAT_WITHOUT_DATE, print_position=True, to_file=True)
+    fmt = Formatter(datefmt=TIME_FORMAT_WITHOUT_DATE, to_file=True)
 
     packages_path: str = sublime.packages_path()
     sublime_config_path = os.path.dirname(packages_path)
