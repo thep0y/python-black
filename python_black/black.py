@@ -4,7 +4,7 @@
 # @Email:     thepoy@163.com
 # @File Name: black.py
 # @Created:   2022-02-04 10:51:04
-# @Modified:  2022-11-01 20:49:14
+# @Modified:  2023-02-10 14:35:45
 
 import sublime
 import sys
@@ -90,10 +90,6 @@ def read_pyproject_toml(
     if not config:
         return default_config, None
 
-    config = {
-        k: str(v) if not isinstance(v, (list, dict)) else v for k, v in config.items()
-    }
-
     target_version = config.get("target_version")
     if target_version is not None and not isinstance(target_version, list):
         raise AttributeError("target-version: Config key target-version must be a list")
@@ -104,7 +100,7 @@ def read_pyproject_toml(
 
     default_map.update(config)
 
-    logger.info("used config: %s", default_map)
+    logger.debug("configuration after applying `pyproject.toml`: %s", default_map)
 
     return default_map, config_file
 
@@ -150,6 +146,10 @@ def really_format(
                 and any([(not isinstance(v, bool) and v), isinstance(v, bool)])
             }
         )
+        logger.debug(
+            "configuration after applying `Sublime Package User Settings`: ",
+            default_config,
+        )
 
     if config_file:
         default_config, config_file = read_pyproject_toml(
@@ -170,7 +170,7 @@ def really_format(
         out("No configuration file found, use the default configuration")
 
     # NOTE: Update default config from project settings.
-    if isinstance(project_settings, dict):
+    if project_settings and isinstance(project_settings, dict):
         default_config.update(
             {
                 k: v
@@ -178,6 +178,10 @@ def really_format(
                 if k in default_config
                 and any([(not isinstance(v, bool) and v), isinstance(v, bool)])
             }
+        )
+        logger.debug(
+            "configuration after applying `Sublime Project Settings`: %s",
+            default_config,
         )
 
     versions = set()
@@ -187,7 +191,8 @@ def really_format(
         if target_version:
             versions = set(target_version)
 
-    logger.info(f"apply black options: {default_config}.")
+    logger.info("configuration used: %s", default_config)
+
     mode = Mode(
         target_versions=versions,
         line_length=default_config["line_length"],
@@ -212,7 +217,7 @@ def format_by_import_black_package(
 ) -> Optional[str]:
     config_file = find_config_file(view, smart_mode)
 
-    logger.debug("found the config file: %s", config_file)
+    logger.info("configuration file used: %s", config_file)
 
     if smart_mode and not config_file:
         logger.info("smart mode is in use, but the project config file is not found")

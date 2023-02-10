@@ -119,6 +119,7 @@ class Formatter(logging.Formatter):
 
 def log_level() -> int:
     """Get the log level.
+
     Returns `DEBUG` in debug mode, `INFO` otherwise.
 
     Returns:
@@ -194,8 +195,10 @@ __logger = get_logger()
 
 def child_logger(name: str) -> logging.Logger:
     """Get a new child logger with `name`.
+
     Args:
         name (str): the name of child logger
+
     Returns:
         Logger: the instance of `logging.Logger`
     """
