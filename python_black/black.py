@@ -1,21 +1,23 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Author:    thepoy
-# @Email:     thepoy@163.com
-# @File Name: black.py
-# @Created:   2022-02-04 10:51:04
-# @Modified:  2023-02-10 14:35:45
+# @Author:      thepoy
+# @Email:       thepoy@163.com
+# @File Name:   black.py
+# @Created At:  2022-02-04 10:51:04
+# @Modified At: 2023-02-12 19:14:13
+# @Modified By: thepoy
 
 import sublime
 import sys
 
 from pathlib import Path
-from typing import Optional, Any, Dict, Tuple, List
+from typing import Optional, Any, Dict, Tuple, List, TypedDict
 
 from .lib.black import format_str
 from .lib.black.files import parse_pyproject_toml
 from .lib.black.mode import Mode, TargetVersion
 from .lib.black.const import DEFAULT_LINE_LENGTH, DEFAULT_INCLUDES
+from .types import BlackConfig, SublimeSettings
 from .utils import get_project_setting_file, replace_text, out
 from .log import child_logger
 
@@ -23,7 +25,7 @@ from .log import child_logger
 logger = child_logger(__name__)
 
 
-def target_version_option_callback(v: Tuple[str, ...]) -> List[TargetVersion]:
+def target_version_option_callback(v: List[str]) -> List[TargetVersion]:
     return [TargetVersion[val.upper()] for val in v]
 
 
@@ -35,7 +37,6 @@ def find_global_config_file() -> Optional[Path]:
     else:
         config_file = HOME / ".config" / "black"
 
-    config_file.is_file()
     if config_file.exists() and config_file.is_file():
         return config_file
 
@@ -59,31 +60,31 @@ def find_config_file(view: sublime.View, smart_mode: bool):
 
 def read_pyproject_toml(
     config_file: Path,
-    default_config: Dict[str, Any],
+    default_config: BlackConfig,
     smart_mode: bool,
-) -> Tuple[Dict[str, Any], Optional[Path]]:
+) -> Tuple[Optional[BlackConfig], Optional[Path]]:
     """Inject Black configuration from "pyproject.toml" into defaults config.
 
     Returns the configuration dict and config file path to
     a successfully found and read configuration file, None otherwise.
 
     Args:
-        config_file (Optional[str]): Description
-        default_config (Optional[Dict[str, Any]]): Description
-        src (Tuple[str, ...]): Description
+        config_file (Optional[str]): Configuration file to be used
+        default_config (Optional[BlackConfig]): Default configuration
+        smart_mode (bool): Whether to use smart mode
 
     Returns:
-        Tuple[Optional[dict], Optional[str]]: config and config file
+        Tuple[Optional[BlackConfig], Optional[str]]: config and config file
     """
     try:
-        config = parse_pyproject_toml(str(config_file))
+        config: BlackConfig = parse_pyproject_toml(str(config_file))  # type: ignore
     except (OSError, ValueError, FileNotFoundError) as e:
         raise Exception(f"Error reading configuration file: {e}")
 
     logger.debug("project config: %s", config)
 
     if smart_mode and not config:
-        return {}, None
+        return None, None
 
     logger.debug("parsed config: %s", config)
 
@@ -94,7 +95,7 @@ def read_pyproject_toml(
     if target_version is not None and not isinstance(target_version, list):
         raise AttributeError("target-version: Config key target-version must be a list")
 
-    default_map: Dict[str, Any] = {}
+    default_map: BlackConfig = {}  # type: ignore
     if default_config:
         default_map.update(default_config)
 
@@ -105,12 +106,23 @@ def read_pyproject_toml(
     return default_map, config_file
 
 
-def really_format(
+def update_config(default_config: BlackConfig, settings: SublimeSettings):
+    default_config.update(
+        {
+            k: v  # type: ignore
+            for k, v in settings.get("options", {}).items()
+            if k in default_config
+            and any([(not isinstance(v, bool) and v), isinstance(v, bool)])
+        }
+    )
+
+
+def black_format_str(
     code: str,
     config_file: Optional[Path],
     smart_mode: bool,
-    package_settings: Optional[Dict[str, Any]],
-    project_settings: Optional[Dict[str, Any]],
+    package_settings: Optional[SublimeSettings],
+    project_settings: Optional[SublimeSettings],
 ) -> Optional[str]:
     """
     Directly call the format function of the `black`
@@ -127,7 +139,7 @@ def really_format(
     Returns:
         Optional[str]: Formatted code
     """
-    default_config: Dict[str, Any] = {
+    default_config: Optional[BlackConfig] = {
         "target_version": [],
         "line_length": DEFAULT_LINE_LENGTH,
         "string_normalization": True,
@@ -136,16 +148,10 @@ def really_format(
         "magic_trailing_comma": True,
         "include": DEFAULT_INCLUDES,
     }
+
     # NOTE: Update default config from package settings.
-    if isinstance(package_settings, dict):
-        default_config.update(
-            {
-                k: v
-                for k, v in package_settings.get("options", {}).items()
-                if k in default_config
-                and any([(not isinstance(v, bool) and v), isinstance(v, bool)])
-            }
-        )
+    if package_settings and isinstance(package_settings, dict):
+        update_config(default_config, package_settings)
         logger.debug(
             "configuration after applying `Sublime Package User Settings`: ",
             default_config,
@@ -171,14 +177,7 @@ def really_format(
 
     # NOTE: Update default config from project settings.
     if project_settings and isinstance(project_settings, dict):
-        default_config.update(
-            {
-                k: v
-                for k, v in project_settings.get("options", {}).items()
-                if k in default_config
-                and any([(not isinstance(v, bool) and v), isinstance(v, bool)])
-            }
-        )
+        update_config(default_config, project_settings)
         logger.debug(
             "configuration after applying `Sublime Project Settings`: %s",
             default_config,
@@ -187,7 +186,7 @@ def really_format(
     versions = set()
     target_version_in_config_file = default_config.get("target_version")
     if target_version_in_config_file:
-        target_version = target_version_option_callback(tuple(target_version_in_config_file))  # type: ignore
+        target_version = target_version_option_callback(target_version_in_config_file)
         if target_version:
             versions = set(target_version)
 
@@ -212,8 +211,8 @@ def format_by_import_black_package(
     view: sublime.View,
     source: str,
     smart_mode: bool,
-    package_settings: Dict[str, Any],
-    project_settings: Dict[str, Any],
+    package_settings: Optional[SublimeSettings],
+    project_settings: Optional[SublimeSettings],
 ) -> Optional[str]:
     config_file = find_config_file(view, smart_mode)
 
@@ -229,7 +228,7 @@ def format_by_import_black_package(
     if smart_mode:
         package_settings, project_settings = None, None
 
-    formatted = really_format(
+    formatted = black_format_str(
         source, config_file, smart_mode, package_settings, project_settings
     )
     if not formatted:
@@ -239,7 +238,7 @@ def format_by_import_black_package(
         if not smart_mode:
             sublime.status_message("black: Format failed")
 
-        return
+        return None
 
     return formatted
 
@@ -252,8 +251,8 @@ def black_format(
     edit: sublime.Edit,
     view: sublime.View,
     smart_mode: bool,
-    package_settings: Dict[str, Any],
-    project_settings: Dict[str, Any],
+    package_settings: SublimeSettings,
+    project_settings: SublimeSettings,
     # preview: bool = False,
 ):
     sublime.status_message("black: Formatting...")
@@ -263,10 +262,12 @@ def black_format(
     )
 
     if formatted:
-        format_source_file(edit, formatted, filepath, view, region, encoding)
+        write_formatted_to_source_file(
+            edit, formatted, filepath, view, region, encoding
+        )
 
 
-def format_source_file(
+def write_formatted_to_source_file(
     edit: sublime.Edit,
     formatted: str,
     filepath: str,

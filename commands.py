@@ -68,7 +68,7 @@ class BlackCommand(sublime_plugin.TextCommand):
         if not isinstance(source, str) and hasattr(source, "decode"):
             source = source.decode(encoding)
 
-        package_settings = get_package_settings().to_dict()
+        package_settings: SublimeSettings = get_package_settings().to_dict()  # type: ignore
 
         logger.debug("get package settings: %s", package_settings)
 
