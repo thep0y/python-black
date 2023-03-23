@@ -142,10 +142,10 @@ def black_format_str(
     default_config: Optional[BlackConfig] = {
         "target_version": [],
         "line_length": DEFAULT_LINE_LENGTH,
-        "string_normalization": True,
         "is_pyi": False,
         "skip_source_first_line": False,
-        "magic_trailing_comma": True,
+        "skip_string_normalization": False,
+        "skip_magic_trailing_comma": False,
         "include": DEFAULT_INCLUDES,
     }
 
@@ -195,10 +195,10 @@ def black_format_str(
     mode = Mode(
         target_versions=versions,
         line_length=default_config["line_length"],
-        string_normalization=default_config["string_normalization"],
         is_pyi=default_config["is_pyi"],
         skip_source_first_line=default_config["skip_source_first_line"],
-        magic_trailing_comma=default_config["magic_trailing_comma"],
+        string_normalization=not default_config["skip_string_normalization"],
+        magic_trailing_comma=not default_config["skip_magic_trailing_comma"],
     )
 
     if code:

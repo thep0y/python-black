@@ -64,19 +64,24 @@ There are some modifiable properties in settings:
    //    - "smart": Automatic formatting is only enabled if there is a `black` section in the project's `pyproject.toml`
    "format_on_save": "on",
    // Black [OPTIONS]
+   // The priority of loading options for Black is:
+   // Sublime project settings > Configuration file > Sublime package user settings > Sublime package default settings
    "options": {
+      // Python versions that should be supported by Black's output.
       "target_version": [],
+      // How many characters per line to allow.
       "line_length": 88,
-      "string_normalization": true,
+      // Format all input files like typing stubs regardless of file extension (useful when piping source on standard input).
       "is_pyi": false,
-      "is_ipynb": false,
+      // Skip the first line of the source code.
       "skip_source_first_line": false,
-      "magic_trailing_comma": true,
-      "experimental_string_processing": false,
-      "python_cell_magics": [],
-      "preview": false
+      // Don't normalize string quotes or prefixes.
+      "skip_string_normalization": false,
+      // Don't use trailing commas as a reason to split lines.
+      "skip_magic_trailing_comma": false
    }
 }
+
 ```
 
 The `format_on_save` can also be toggled via `Preferences > Package Settings > Python Black > Format On Save`.
@@ -90,7 +95,7 @@ The Black options can also be configured in sublime-project:
         "python-black": {
             "options": {
                 "line_length": 127,
-                "string_normalization": false
+                "skip_string_normalization": true
             }
         }
     }
