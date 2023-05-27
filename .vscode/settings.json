@@ -1,8 +1,0 @@
-{
-  "psi-header.changes-tracking": {
-    "excludeGlob": [
-      "**/lib/**/*.py"
-    ]
-  },
-  "python.analysis.typeCheckingMode": "basic"
-}

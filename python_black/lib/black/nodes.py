@@ -17,14 +17,11 @@ from typing import (
 from ..typing_extensions import TypeGuard
 from ..mypy_extensions import mypyc_attr
 
-# lib2to3 fork
-from ..blib2to3.pytree import Node, Leaf, type_repr, NL
-from ..blib2to3 import pygram
-from ..blib2to3.pgen2 import token
-
 from .cache import CACHE_DIR
 from .strings import has_triple_quotes
-
+from ..blib2to3 import pygram
+from ..blib2to3.pgen2 import token
+from ..blib2to3.pytree import NL, Leaf, Node, type_repr
 
 pygram.initialize(CACHE_DIR)
 syms: Final = pygram.python_symbols
@@ -790,6 +787,33 @@ def is_import(leaf: Leaf) -> bool:
             (v == "import" and p and p.type == syms.import_name)
             or (v == "from" and p and p.type == syms.import_from)
         )
+    )
+
+
+def is_with_or_async_with_stmt(leaf: Leaf) -> bool:
+    """Return True if the given leaf starts a with or async with statement."""
+    return bool(
+        leaf.type == token.NAME
+        and leaf.value == "with"
+        and leaf.parent
+        and leaf.parent.type == syms.with_stmt
+    ) or bool(
+        leaf.type == token.ASYNC
+        and leaf.next_sibling
+        and leaf.next_sibling.type == syms.with_stmt
+    )
+
+
+def is_async_stmt_or_funcdef(leaf: Leaf) -> bool:
+    """Return True if the given leaf starts an async def/for/with statement.
+
+    Note that `async def` can be either an `async_stmt` or `async_funcdef`,
+    the latter is used when it has decorators.
+    """
+    return bool(
+        leaf.type == token.ASYNC
+        and leaf.parent
+        and leaf.parent.type in {syms.async_stmt, syms.async_funcdef}
     )
 
 

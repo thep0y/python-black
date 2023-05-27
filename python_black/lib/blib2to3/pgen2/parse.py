@@ -87,6 +87,7 @@ class Recorder:
         Use the node-level invariant ones for basic parsing operations (push/pop/shift).
         These still will operate on the stack; but they won't create any new nodes, or
         modify the contents of any other existing nodes.
+
         This saves us a ton of time when we are backtracking, since we
         want to restore to the initial state as quick as possible, which
         can only be done by having as little mutatations as possible.
@@ -144,33 +145,43 @@ class ParseError(Exception):
 
 class Parser(object):
     """Parser engine.
+
     The proper usage sequence is:
+
     p = Parser(grammar, [converter])  # create instance
     p.setup([start])                  # prepare for parsing
     <for each input token>:
         if p.addtoken(...):           # parse a token; may raise ParseError
             break
     root = p.rootnode                 # root of abstract syntax tree
+
     A Parser instance may be reused by calling setup() repeatedly.
+
     A Parser instance contains state pertaining to the current token
     sequence, and should not be used concurrently by different threads
     to parse separate token sequences.
+
     See driver.py for how to get input tokens by tokenizing a file or
     string.
+
     Parsing is complete when addtoken() returns True; the root of the
     abstract syntax tree can then be retrieved from the rootnode
     instance variable.  When a syntax error occurs, addtoken() raises
     the ParseError exception.  There is no error recovery; the parser
     cannot be used after a syntax error was reported (but it can be
     reinitialized by calling setup()).
+
     """
 
     def __init__(self, grammar: Grammar, convert: Optional[Convert] = None) -> None:
         """Constructor.
+
         The grammar argument is a grammar.Grammar instance; see the
         grammar module for more information.
+
         The parser is not ready yet for parsing; you must call the
         setup() method to get it started.
+
         The optional convert argument is a function mapping concrete
         syntax tree nodes to abstract syntax tree nodes.  If not
         given, no conversion is done and the syntax tree produced is
@@ -179,18 +190,22 @@ class Parser(object):
         instance), and the second being the concrete syntax tree node
         to be converted.  The syntax tree is converted from the bottom
         up.
+
         **post-note: the convert argument is ignored since for Black's
         usage, convert will always be blib2to3.pytree.convert. Allowing
         this to be dynamic hurts mypyc's ability to use early binding.
         These docs are left for historical and informational value.
+
         A concrete syntax tree node is a (type, value, context, nodes)
         tuple, where type is the node type (a token or symbol number),
         value is None for symbols and a string for tokens, context is
         None or an opaque value used for error reporting (typically a
         (lineno, offset) pair), and nodes is a list of children for
         symbols, and None for tokens.
+
         An abstract syntax tree node may be anything; this is entirely
         up to the converter function.
+
         """
         self.grammar = grammar
         # See note in docstring above. TL;DR this is ignored.
@@ -199,12 +214,16 @@ class Parser(object):
 
     def setup(self, proxy: "TokenProxy", start: Optional[int] = None) -> None:
         """Prepare for parsing.
+
         This *must* be called before starting to parse.
+
         The optional argument is an alternative start symbol; it
         defaults to the grammar's start symbol.
+
         You can use a Parser instance to parse any number of programs;
         each time you call setup() the parser is reset to an initial
         state determined by the (implicit or explicit) start symbol.
+
         """
         if start is None:
             start = self.grammar.start
@@ -313,6 +332,7 @@ class Parser(object):
 
     def classify(self, type: int, value: Text, context: Context) -> List[int]:
         """Turn a token into a label.  (Internal)
+
         Depending on whether the value is a soft-keyword or not,
         this function may return multiple labels to choose from."""
         if type == token.NAME:

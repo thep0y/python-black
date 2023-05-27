@@ -4,10 +4,9 @@ Mostly around Python language feature support per version and Black configuratio
 chosen by the user.
 """
 
-from hashlib import sha256
-
 from dataclasses import dataclass, field
 from enum import Enum, auto
+from hashlib import sha256
 from operator import attrgetter
 from typing import Dict, Set
 from warnings import warn
@@ -150,7 +149,11 @@ def supports_feature(target_versions: Set[TargetVersion], feature: Feature) -> b
 class Preview(Enum):
     """Individual preview style features."""
 
+    add_trailing_comma_consistently = auto()
+    blank_line_after_nested_stub_class = auto()
     hex_codes_in_unicode_sequences = auto()
+    improved_async_statements_handling = auto()
+    multiline_string_handling = auto()
     prefer_splitting_right_hand_side_of_assignments = auto()
     # NOTE: string_processing requires wrap_long_dict_values_in_parens
     # for https://github.com/psf/black/issues/3117 to be fixed.

@@ -60,8 +60,10 @@ class Base(object):
 
     """
     Abstract base class for Node and Leaf.
+
     This provides some default functionality and boilerplate using the
     template pattern.
+
     A node may be a subnode of at most one parent.
     """
 
@@ -80,6 +82,7 @@ class Base(object):
     def __eq__(self, other: Any) -> bool:
         """
         Compare two nodes for equality.
+
         This calls the method _eq().
         """
         if self.__class__ is not other.__class__:
@@ -93,6 +96,7 @@ class Base(object):
     def _eq(self: _P, other: _P) -> bool:
         """
         Compare two nodes for equality.
+
         This is called by __eq__ and __ne__.  It is only called if the two nodes
         have the same type.  This must be implemented by the concrete subclass.
         Nodes should be considered equal if they have the same structure,
@@ -106,6 +110,7 @@ class Base(object):
     def clone(self: _P) -> _P:
         """
         Return a cloned (deep) copy of self.
+
         This must be implemented by the concrete subclass.
         """
         raise NotImplementedError
@@ -113,6 +118,7 @@ class Base(object):
     def post_order(self) -> Iterator[NL]:
         """
         Return a post-order iterator for the tree.
+
         This must be implemented by the concrete subclass.
         """
         raise NotImplementedError
@@ -120,6 +126,7 @@ class Base(object):
     def pre_order(self) -> Iterator[NL]:
         """
         Return a pre-order iterator for the tree.
+
         This must be implemented by the concrete subclass.
         """
         raise NotImplementedError
@@ -245,8 +252,10 @@ class Node(Base):
     ) -> None:
         """
         Initializer.
+
         Takes a type constant (a symbol number >= 256), a sequence of
         child nodes, and an optional context keyword argument.
+
         As a side effect, the parent pointers of the children are updated.
         """
         assert type >= 256, type
@@ -275,6 +284,7 @@ class Node(Base):
     def __str__(self) -> Text:
         """
         Return a pretty string representation.
+
         This reproduces the input source exactly.
         """
         return "".join(map(str, self.children))
@@ -380,6 +390,10 @@ class Leaf(Base):
     _prefix = ""  # Whitespace and comments preceding this token in the input
     lineno: int = 0  # Line where this token starts in the input
     column: int = 0  # Column where this token starts in the input
+    # If not None, this Leaf is created by converting a block of fmt off/skip
+    # code, and `fmt_pass_converted_first_leaf` points to the first Leaf in the
+    # converted code.
+    fmt_pass_converted_first_leaf: Optional["Leaf"] = None
 
     def __init__(
         self,
@@ -389,9 +403,11 @@ class Leaf(Base):
         prefix: Optional[Text] = None,
         fixers_applied: List[Any] = [],
         opening_bracket: Optional["Leaf"] = None,
+        fmt_pass_converted_first_leaf: Optional["Leaf"] = None,
     ) -> None:
         """
         Initializer.
+
         Takes a type constant (a token number < 256), a string value, and an
         optional context keyword argument.
         """
@@ -406,6 +422,7 @@ class Leaf(Base):
         self.fixers_applied: Optional[List[Any]] = fixers_applied[:]
         self.children = []
         self.opening_bracket = opening_bracket
+        self.fmt_pass_converted_first_leaf = fmt_pass_converted_first_leaf
 
     def __repr__(self) -> str:
         """Return a canonical string representation."""
@@ -421,6 +438,7 @@ class Leaf(Base):
     def __str__(self) -> Text:
         """
         Return a pretty string representation.
+
         This reproduces the input source exactly.
         """
         return self._prefix + str(self.value)
@@ -466,6 +484,7 @@ class Leaf(Base):
 def convert(gr: Grammar, raw_node: RawNode) -> NL:
     """
     Convert raw node information to a Node or Leaf instance.
+
     This is passed to the parser driver which calls it whenever a reduction of a
     grammar rule produces a new complete node, so that the tree is build
     strictly bottom-up.
@@ -489,10 +508,13 @@ class BasePattern(object):
 
     """
     A pattern is a tree matching pattern.
+
     It looks for a specific node type (token or symbol), and
     optionally for a specific content.
+
     This is an abstract base class.  There are three concrete
     subclasses:
+
     - LeafPattern matches a single leaf node;
     - NodePattern matches a single node (usually non-leaf);
     - WildcardPattern matches a sequence of nodes of variable length.
@@ -522,6 +544,7 @@ class BasePattern(object):
     def optimize(self) -> "BasePattern":
         """
         A subclass can define this as a hook for optimizations.
+
         Returns either self or another node with the same effect.
         """
         return self
@@ -529,9 +552,12 @@ class BasePattern(object):
     def match(self, node: NL, results: Optional[_Results] = None) -> bool:
         """
         Does this pattern exactly match a node?
+
         Returns True if it matches, False if not.
+
         If results is not None, it must be a dict which will be
         updated with the nodes matching named subpatterns.
+
         Default implementation for non-wildcard patterns.
         """
         if self.type is not None and node.type != self.type:
@@ -552,6 +578,7 @@ class BasePattern(object):
     def match_seq(self, nodes: List[NL], results: Optional[_Results] = None) -> bool:
         """
         Does this pattern exactly match a sequence of nodes?
+
         Default implementation for non-wildcard patterns.
         """
         if len(nodes) != 1:
@@ -561,6 +588,7 @@ class BasePattern(object):
     def generate_matches(self, nodes: List[NL]) -> Iterator[Tuple[int, _Results]]:
         """
         Generator yielding all matches for this pattern.
+
         Default implementation for non-wildcard patterns.
         """
         r: _Results = {}
@@ -577,9 +605,12 @@ class LeafPattern(BasePattern):
     ) -> None:
         """
         Initializer.  Takes optional type, content, and name.
+
         The type, if given must be a token type (< 256).  If not given,
         this matches any *leaf* node; the content may still be required.
+
         The content, if given, must be a string.
+
         If a name is given, the matching node is stored in the results
         dict under that key.
         """
@@ -600,17 +631,20 @@ class LeafPattern(BasePattern):
     def _submatch(self, node, results=None):
         """
         Match the pattern's content to the node's children.
+
         This assumes the node type matches and self.content is not None.
+
         Returns True if it matches, False if not.
+
         If results is not None, it must be a dict which will be
         updated with the nodes matching named subpatterns.
+
         When returning False, the results dict may still be updated.
         """
         return self.content == node.value
 
 
 class NodePattern(BasePattern):
-
     wildcards: bool = False
 
     def __init__(
@@ -621,13 +655,16 @@ class NodePattern(BasePattern):
     ) -> None:
         """
         Initializer.  Takes optional type, content, and name.
+
         The type, if given, must be a symbol type (>= 256).  If the
         type is None this matches *any* single node (leaf or not),
         except if content is not None, in which it only matches
         non-leaf nodes that also match the content pattern.
+
         The content, if not None, must be a sequence of Patterns that
         must match the node's children exactly.  If the content is
         given, the type must not be None.
+
         If a name is given, the matching node is stored in the results
         dict under that key.
         """
@@ -650,10 +687,14 @@ class NodePattern(BasePattern):
     def _submatch(self, node, results=None) -> bool:
         """
         Match the pattern's content to the node's children.
+
         This assumes the node type matches and self.content is not None.
+
         Returns True if it matches, False if not.
+
         If results is not None, it must be a dict which will be
         updated with the nodes matching named subpatterns.
+
         When returning False, the results dict may still be updated.
         """
         if self.wildcards:
@@ -675,10 +716,13 @@ class WildcardPattern(BasePattern):
 
     """
     A wildcard pattern can match zero or more nodes.
+
     This has all the flexibility needed to implement patterns like:
+
     .*      .+      .?      .{m,n}
     (a b c | d e | f)
     (...)*  (...)+  (...)?  (...){m,n}
+
     except it always uses non-greedy matching.
     """
 
@@ -694,6 +738,7 @@ class WildcardPattern(BasePattern):
     ) -> None:
         """
         Initializer.
+
         Args:
             content: optional sequence of subsequences of patterns;
                      if absent, matches one node;
@@ -701,6 +746,7 @@ class WildcardPattern(BasePattern):
             min: optional minimum number of times to match, default 0
             max: optional maximum number of times to match, default HUGE
             name: optional name assigned to this match
+
         [*] Thus, if content is [[a, b, c], [d, e], [f, g, h]] this is
             equivalent to (a b c | d e | f g h); if content is None,
             this is equivalent to '.' in regular expression terms.
@@ -773,8 +819,10 @@ class WildcardPattern(BasePattern):
     def generate_matches(self, nodes) -> Iterator[Tuple[int, _Results]]:
         """
         Generator yielding matches for a sequence of nodes.
+
         Args:
             nodes: sequence of nodes
+
         Yields:
             (count, results) tuples where:
             count: the match comprises nodes[:count];
@@ -878,6 +926,7 @@ class NegatedPattern(BasePattern):
     def __init__(self, content: Optional[BasePattern] = None) -> None:
         """
         Initializer.
+
         The argument is either a pattern or None.  If it is None, this
         only matches an empty sequence (effectively '$' in regex
         lingo).  If it is not None, this matches whenever the argument
@@ -912,9 +961,11 @@ def generate_matches(
 ) -> Iterator[Tuple[int, _Results]]:
     """
     Generator yielding matches for a sequence of patterns and nodes.
+
     Args:
         patterns: a sequence of patterns
         nodes: a sequence of nodes
+
     Yields:
         (count, results) tuples where:
         count: the entire sequence of patterns matches nodes[:count];

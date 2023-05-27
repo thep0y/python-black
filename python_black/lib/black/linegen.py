@@ -1,12 +1,29 @@
 """
 Generating lines of code.
 """
-from functools import partial, wraps
 import sys
-from typing import Collection, Iterator, List, Optional, Set, Union, cast
+from dataclasses import replace
 from enum import Enum, auto
-from dataclasses import dataclass
+from functools import partial, wraps
+from typing import Collection, Iterator, List, Optional, Set, Union, cast
 
+from .brackets import (
+    COMMA_PRIORITY,
+    DOT_PRIORITY,
+    get_leaves_inside_matching_brackets,
+    max_delimiter_priority_in_atom,
+)
+from .comments import FMT_OFF, generate_comments, list_comments
+from .lines import (
+    Line,
+    RHSResult,
+    append_leaves,
+    can_be_split,
+    can_omit_invisible_parens,
+    is_line_short_enough,
+    line_to_string,
+)
+from .mode import Mode, Feature, Preview
 from .nodes import (
     ASSIGNMENTS,
     BRACKETS,
@@ -19,6 +36,7 @@ from .nodes import (
     Visitor,
     ensure_visible,
     is_arith_like,
+    is_async_stmt_or_funcdef,
     is_atom_with_invisible_parens,
     is_docstring,
     is_empty_tuple,
@@ -37,43 +55,25 @@ from .nodes import (
     syms,
     wrap_in_parentheses,
 )
-from .brackets import (
-    max_delimiter_priority_in_atom,
-    get_leaves_inside_matching_brackets,
-    DOT_PRIORITY,
-    COMMA_PRIORITY,
-)
-from .lines import (
-    Line,
-    line_to_string,
-    is_line_short_enough,
-    can_omit_invisible_parens,
-    can_be_split,
-    append_leaves,
-)
-from .comments import generate_comments, list_comments, FMT_OFF
 from .numerics import normalize_numeric_literal
 from .strings import (
-    get_string_prefix,
     fix_docstring,
+    get_string_prefix,
     normalize_string_prefix,
     normalize_string_quotes,
     normalize_unicode_escape_sequences,
 )
 from .trans import (
-    Transformer,
     CannotTransform,
     StringMerger,
     StringSplitter,
-    StringParenWrapper,
     StringParenStripper,
+    StringParenWrapper,
+    Transformer,
     hug_power_op,
 )
-from .mode import Mode, Feature, Preview
-
-from ..blib2to3.pytree import Node, Leaf
 from ..blib2to3.pgen2 import token
-
+from ..blib2to3.pytree import Node, Leaf
 
 # types
 LeafID = int
@@ -110,6 +110,17 @@ class LineGenerator(Visitor[Line]):
         if not self.current_line:
             self.current_line.depth += indent
             return  # Line is empty, don't emit. Creating a new one unnecessary.
+
+        if (
+            Preview.improved_async_statements_handling in self.mode
+            and len(self.current_line.leaves) == 1
+            and is_async_stmt_or_funcdef(self.current_line.leaves[0])
+        ):
+            # Special case for async def/for/with statements. `visit_async_stmt`
+            # adds an `ASYNC` leaf then visits the child def/for/with statement
+            # nodes. Line yields from those nodes shouldn't treat the former
+            # `ASYNC` leaf as a complete line.
+            return
 
         complete_line = self.current_line
         self.current_line = Line(mode=self.mode, depth=complete_line.depth + indent)
@@ -302,8 +313,11 @@ class LineGenerator(Visitor[Line]):
                 break
 
         internal_stmt = next(children)
-        for child in internal_stmt.children:
-            yield from self.visit(child)
+        if Preview.improved_async_statements_handling in self.mode:
+            yield from self.visit(internal_stmt)
+        else:
+            for child in internal_stmt.children:
+                yield from self.visit(child)
 
     def visit_decorators(self, node: Node) -> Iterator[Line]:
         """Visit decorators."""
@@ -507,7 +521,7 @@ def transform_line(
         and not line.should_split_rhs
         and not line.magic_trailing_comma
         and (
-            is_line_short_enough(line, line_length=mode.line_length, line_str=line_str)
+            is_line_short_enough(line, mode=mode, line_str=line_str)
             or line.contains_unsplittable_type_ignore()
         )
         and not (line.inside_brackets and line.contains_standalone_comments())
@@ -522,7 +536,7 @@ def transform_line(
     else:
 
         def _rhs(
-            self: object, line: Line, features: Collection[Feature]
+            self: object, line: Line, features: Collection[Feature], mode: Mode
         ) -> Iterator[Line]:
             """Wraps calls to `right_hand_split`.
 
@@ -531,14 +545,12 @@ def transform_line(
             bracket pair instead.
             """
             for omit in generate_trailers_to_omit(line, mode.line_length):
-                lines = list(
-                    right_hand_split(line, mode.line_length, features, omit=omit)
-                )
+                lines = list(right_hand_split(line, mode, features, omit=omit))
                 # Note: this check is only able to figure out if the first line of the
                 # *current* transformation fits in the line length.  This is true only
                 # for simple cases.  All others require running more transforms via
                 # `transform_line()`.  This check doesn't know if those would succeed.
-                if is_line_short_enough(lines[0], line_length=mode.line_length):
+                if is_line_short_enough(lines[0], mode=mode):
                     yield from lines
                     return
 
@@ -546,9 +558,7 @@ def transform_line(
             # This mostly happens to multiline strings that are by definition
             # reported as not fitting a single line, as well as lines that contain
             # trailing commas (those have to be exploded).
-            yield from right_hand_split(
-                line, line_length=mode.line_length, features=features
-            )
+            yield from right_hand_split(line, mode, features=features)
 
         # HACK: nested functions (like _rhs) compiled by mypyc don't retain their
         # __name__ attribute which is needed in `run_transformer` further down.
@@ -606,7 +616,9 @@ class _BracketSplitComponent(Enum):
     tail = auto()
 
 
-def left_hand_split(line: Line, _features: Collection[Feature] = ()) -> Iterator[Line]:
+def left_hand_split(
+    line: Line, _features: Collection[Feature], mode: Mode
+) -> Iterator[Line]:
     """Split line into many lines, starting with the first matching bracket pair.
 
     Note: this usually looks weird, only use this for function definitions.
@@ -651,20 +663,9 @@ def left_hand_split(line: Line, _features: Collection[Feature] = ()) -> Iterator
             yield result
 
 
-@dataclass
-class _RHSResult:
-    """Intermediate split result from a right hand split."""
-
-    head: Line
-    body: Line
-    tail: Line
-    opening_bracket: Leaf
-    closing_bracket: Leaf
-
-
 def right_hand_split(
     line: Line,
-    line_length: int,
+    mode: Mode,
     features: Collection[Feature] = (),
     omit: Collection[LeafID] = (),
 ) -> Iterator[Line]:
@@ -678,14 +679,14 @@ def right_hand_split(
     """
     rhs_result = _first_right_hand_split(line, omit=omit)
     yield from _maybe_split_omitting_optional_parens(
-        rhs_result, line, line_length, features=features, omit=omit
+        rhs_result, line, mode, features=features, omit=omit
     )
 
 
 def _first_right_hand_split(
     line: Line,
     omit: Collection[LeafID] = (),
-) -> _RHSResult:
+) -> RHSResult:
     """Split the line into head, body, tail starting with the last bracket pair.
 
     Note: this function should not have side effects. It's relied upon by
@@ -727,13 +728,13 @@ def _first_right_hand_split(
         tail_leaves, line, opening_bracket, component=_BracketSplitComponent.tail
     )
     bracket_split_succeeded_or_raise(head, body, tail)
-    return _RHSResult(head, body, tail, opening_bracket, closing_bracket)
+    return RHSResult(head, body, tail, opening_bracket, closing_bracket)
 
 
 def _maybe_split_omitting_optional_parens(
-    rhs: _RHSResult,
+    rhs: RHSResult,
     line: Line,
-    line_length: int,
+    mode: Mode,
     features: Collection[Feature] = (),
     omit: Collection[LeafID] = (),
 ) -> Iterator[Line]:
@@ -751,38 +752,39 @@ def _maybe_split_omitting_optional_parens(
         # there are no standalone comments in the body
         and not rhs.body.contains_standalone_comments(0)
         # and we can actually remove the parens
-        and can_omit_invisible_parens(rhs.body, line_length)
+        and can_omit_invisible_parens(rhs, mode.line_length)
     ):
         omit = {id(rhs.closing_bracket), *omit}
         try:
-            # The _RHSResult Omitting Optional Parens.
+            # The RHSResult Omitting Optional Parens.
             rhs_oop = _first_right_hand_split(line, omit=omit)
             if not (
                 Preview.prefer_splitting_right_hand_side_of_assignments in line.mode
                 # the split is right after `=`
                 and len(rhs.head.leaves) >= 2
                 and rhs.head.leaves[-2].type == token.EQUAL
-                # the left side of assignement contains brackets
+                # the left side of assignment contains brackets
                 and any(leaf.type in BRACKETS for leaf in rhs.head.leaves[:-1])
                 # the left side of assignment is short enough (the -1 is for the ending
                 # optional paren)
-                and is_line_short_enough(rhs.head, line_length=line_length - 1)
+                and is_line_short_enough(
+                    rhs.head, mode=replace(mode, line_length=mode.line_length - 1)
+                )
                 # the left side of assignment won't explode further because of magic
                 # trailing comma
                 and rhs.head.magic_trailing_comma is None
                 # the split by omitting optional parens isn't preferred by some other
                 # reason
-                and not _prefer_split_rhs_oop(rhs_oop, line_length=line_length)
+                and not _prefer_split_rhs_oop(rhs_oop, mode)
             ):
                 yield from _maybe_split_omitting_optional_parens(
-                    rhs_oop, line, line_length, features=features, omit=omit
+                    rhs_oop, line, mode, features=features, omit=omit
                 )
                 return
 
         except CannotSplit as e:
             if not (
-                can_be_split(rhs.body)
-                or is_line_short_enough(rhs.body, line_length=line_length)
+                can_be_split(rhs.body) or is_line_short_enough(rhs.body, mode=mode)
             ):
                 raise CannotSplit(
                     "Splitting failed, body is still too long and can't be split."
@@ -806,7 +808,7 @@ def _maybe_split_omitting_optional_parens(
             yield result
 
 
-def _prefer_split_rhs_oop(rhs_oop: _RHSResult, line_length: int) -> bool:
+def _prefer_split_rhs_oop(rhs_oop: RHSResult, mode: Mode) -> bool:
     """
     Returns whether we should prefer the result from a split omitting optional parens.
     """
@@ -826,7 +828,7 @@ def _prefer_split_rhs_oop(rhs_oop: _RHSResult, line_length: int) -> bool:
             # the first line still contains the `=`)
             any(leaf.type == token.EQUAL for leaf in rhs_oop.head.leaves)
             # the first line is short enough
-            and is_line_short_enough(rhs_oop.head, line_length=line_length)
+            and is_line_short_enough(rhs_oop.head, mode=mode)
         )
         # contains unsplittable type ignore
         or rhs_oop.head.contains_unsplittable_type_ignore()
@@ -942,16 +944,39 @@ def dont_increase_indentation(split_func: Transformer) -> Transformer:
     """
 
     @wraps(split_func)
-    def split_wrapper(line: Line, features: Collection[Feature] = ()) -> Iterator[Line]:
-        for split_line in split_func(line, features):
+    def split_wrapper(
+        line: Line, features: Collection[Feature], mode: Mode
+    ) -> Iterator[Line]:
+        for split_line in split_func(line, features, mode):
             normalize_prefix(split_line.leaves[0], inside_brackets=True)
             yield split_line
 
     return split_wrapper
 
 
+def _get_last_non_comment_leaf(line: Line) -> Optional[int]:
+    for leaf_idx in range(len(line.leaves) - 1, 0, -1):
+        if line.leaves[leaf_idx].type != STANDALONE_COMMENT:
+            return leaf_idx
+    return None
+
+
+def _safe_add_trailing_comma(safe: bool, delimiter_priority: int, line: Line) -> Line:
+    if (
+        safe
+        and delimiter_priority == COMMA_PRIORITY
+        and line.leaves[-1].type != token.COMMA
+        and line.leaves[-1].type != STANDALONE_COMMENT
+    ):
+        new_comma = Leaf(token.COMMA, ",")
+        line.append(new_comma)
+    return line
+
+
 @dont_increase_indentation
-def delimiter_split(line: Line, features: Collection[Feature] = ()) -> Iterator[Line]:
+def delimiter_split(
+    line: Line, features: Collection[Feature], mode: Mode
+) -> Iterator[Line]:
     """Split according to delimiters of the highest priority.
 
     If the appropriate Features are given, the split will add trailing commas
@@ -991,7 +1016,8 @@ def delimiter_split(line: Line, features: Collection[Feature] = ()) -> Iterator[
             )
             current_line.append(leaf)
 
-    for leaf in line.leaves:
+    last_non_comment_leaf = _get_last_non_comment_leaf(line)
+    for leaf_idx, leaf in enumerate(line.leaves):
         yield from append_to_line(leaf)
 
         for comment_after in line.comments_after(leaf):
@@ -1008,6 +1034,15 @@ def delimiter_split(line: Line, features: Collection[Feature] = ()) -> Iterator[
                     trailing_comma_safe and Feature.TRAILING_COMMA_IN_CALL in features
                 )
 
+        if (
+            Preview.add_trailing_comma_consistently in mode
+            and last_leaf.type == STANDALONE_COMMENT
+            and leaf_idx == last_non_comment_leaf
+        ):
+            current_line = _safe_add_trailing_comma(
+                trailing_comma_safe, delimiter_priority, current_line
+            )
+
         leaf_priority = bt.delimiters.get(id(leaf))
         if leaf_priority == delimiter_priority:
             yield current_line
@@ -1016,20 +1051,15 @@ def delimiter_split(line: Line, features: Collection[Feature] = ()) -> Iterator[
                 mode=line.mode, depth=line.depth, inside_brackets=line.inside_brackets
             )
     if current_line:
-        if (
-            trailing_comma_safe
-            and delimiter_priority == COMMA_PRIORITY
-            and current_line.leaves[-1].type != token.COMMA
-            and current_line.leaves[-1].type != STANDALONE_COMMENT
-        ):
-            new_comma = Leaf(token.COMMA, ",")
-            current_line.append(new_comma)
+        current_line = _safe_add_trailing_comma(
+            trailing_comma_safe, delimiter_priority, current_line
+        )
         yield current_line
 
 
 @dont_increase_indentation
 def standalone_comment_split(
-    line: Line, features: Collection[Feature] = ()
+    line: Line, features: Collection[Feature], mode: Mode
 ) -> Iterator[Line]:
     """Split standalone comments from the rest of the line."""
     if not line.contains_standalone_comments(0):
@@ -1482,7 +1512,7 @@ def run_transformer(
     if not line_str:
         line_str = line_to_string(line)
     result: List[Line] = []
-    for transformed_line in transform(line, features):
+    for transformed_line in transform(line, features, mode):
         if str(transformed_line).strip("\n") == line_str:
             raise CannotTransform("Line transformer returned an unchanged result")
 
@@ -1497,7 +1527,7 @@ def run_transformer(
         or line.contains_multiline_strings()
         or result[0].contains_uncollapsable_type_comments()
         or result[0].contains_unsplittable_type_ignore()
-        or is_line_short_enough(result[0], line_length=mode.line_length)
+        or is_line_short_enough(result[0], mode=mode)
         # If any leaves have no parents (which _can_ occur since
         # `transform(line)` potentially destroys the line's underlying node
         # structure), then we can't proceed. Doing so would cause the below
@@ -1512,8 +1542,6 @@ def run_transformer(
     second_opinion = run_transformer(
         line_copy, transform, mode, features_fop, line_str=line_str
     )
-    if all(
-        is_line_short_enough(ln, line_length=mode.line_length) for ln in second_opinion
-    ):
+    if all(is_line_short_enough(ln, mode=mode) for ln in second_opinion):
         result = second_opinion
     return result

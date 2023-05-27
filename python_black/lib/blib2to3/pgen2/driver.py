@@ -105,7 +105,7 @@ class TokenProxy:
 
     def can_advance(self, to: int) -> bool:
         # Try to eat, fail if it can't. The eat operation is cached
-        # so there wont be any additional cost of eating here
+        # so there won't be any additional cost of eating here
         try:
             self.eat(to)
         except StopIteration:
@@ -290,9 +290,11 @@ def load_packaged_grammar(
         pkgutil.get_data(package, pickled_grammar)
     where *pickled_grammar* is computed from *grammar_source* by adding the
     Python version and using a ``.pickle`` extension.
+
     However, if *grammar_source* is an extant file, load_grammar(grammar_source)
     is called instead. This facilitates using a packaged grammar file when needed
     but preserves load_grammar's automatic regeneration behavior when possible.
+
     """
     if os.path.isfile(grammar_source):
         gp = _generate_pickle_name(grammar_source, cache_dir) if cache_dir else None
@@ -307,6 +309,7 @@ def load_packaged_grammar(
 
 def main(*args: Text) -> bool:
     """Main program, when run as a script: produce grammar pickle files.
+
     Calls load_grammar for each argument, a path to a grammar text file.
     """
     if not args:
