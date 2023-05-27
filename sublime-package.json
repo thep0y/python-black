@@ -10,18 +10,49 @@
           "properties": {
             "format_on_save": {
               "type": [
-                "boolean",
                 "string"
               ],
               "default": true,
               "enum": [
-                true,
-                false,
                 "on",
                 "off",
-                "smart",
+                "smart"
               ],
               "markdownDescription": "Whether to **automatically format** the entire document when saving."
+            },
+            "options": {
+              "type": "object",
+              "properties": {
+                "target_version": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "uniqueItems": true,
+                  "markdownDescription": "Python versions that should be supported by Black's output."
+                },
+                "line_length": {
+                  "type": "integer",
+                  "markdownDescription": "How many characters per line to allow."
+                },
+                "is_pyi": {
+                  "type": "boolean",
+                  "markdownDescription": "Format all input files like typing stubs regardless of file extension (useful when piping source on standard input)."
+                },
+                "skip_source_first_line": {
+                  "type": "boolean",
+                  "markdownDescription": "Skip the first line of the source code."
+                },
+                "skip_string_normalization": {
+                  "type": "boolean",
+                  "markdownDescription": "Don't normalize string quotes or prefixes."
+                },
+                "skip_magic_trailing_comma": {
+                  "type": "boolean",
+                  "markdownDescription": "Don't use trailing commas as a reason to split lines."
+                }
+              },
+              "markdownDescription": "black options"
             }
           }
         }
