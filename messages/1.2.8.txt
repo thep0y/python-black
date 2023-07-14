@@ -1,8 +1,0 @@
-=> 1.2.8
-
-# Features
-
-# Fixes and Improvements
-
-- Upgrade black to 23.3.0
-
