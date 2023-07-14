@@ -5,7 +5,6 @@
 
 # Python imports
 import os
-import hashlib
 
 from pathlib import Path
 from typing import Tuple
@@ -24,7 +23,7 @@ from ._PatternGrammar import PATTERN_GRAMMAR
 #                                      "PatternGrammar.txt")
 
 
-class Symbols(object):
+class Symbols:
     def __init__(self, grammar: Grammar) -> None:
         """Initializer.
 
@@ -98,6 +97,7 @@ class _python_symbols(Symbols):
     old_test: int
     or_test: int
     parameters: int
+    paramspec: int
     pass_stmt: int
     pattern: int
     patterns: int
@@ -129,7 +129,12 @@ class _python_symbols(Symbols):
     tname_star: int
     trailer: int
     try_stmt: int
+    type_stmt: int
     typedargslist: int
+    typeparam: int
+    typeparams: int
+    typevar: int
+    typevartuple: int
     varargslist: int
     vfpdef: int
     vfplist: int
@@ -163,7 +168,6 @@ python_grammar_soft_keywords: Grammar
 python_symbols: _python_symbols
 pattern_symbols: _pattern_symbols
 
-
 File = Tuple[str, str]
 
 
@@ -177,7 +181,6 @@ def _create_new_files(*files: File):
                 os.remove(file[0])
 
         if not os.path.exists(file[0]):
-
             with open(file[0], "w") as f:
                 f.write(file[1])
 

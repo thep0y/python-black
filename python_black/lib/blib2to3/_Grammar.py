@@ -4,19 +4,25 @@ GRAMMAR = """# Grammar for 2to3. This grammar supports Python 2.x and 3.x.
 # https://devguide.python.org/grammar/
 
 # Start symbols for the grammar:
-#      file_input is a module or sequence of commands read from an input file;
-#      single_input is a single interactive statement;
-#      eval_input is the input for the eval() and input() functions.
+#	file_input is a module or sequence of commands read from an input file;
+#	single_input is a single interactive statement;
+#	eval_input is the input for the eval() and input() functions.
 # NB: compound_stmt in single_input is followed by extra NEWLINE!
 file_input: (NEWLINE | stmt)* ENDMARKER
 single_input: NEWLINE | simple_stmt | compound_stmt NEWLINE
 eval_input: testlist NEWLINE* ENDMARKER
 
+typevar: NAME [':' expr]
+paramspec: '**' NAME
+typevartuple: '*' NAME
+typeparam: typevar | paramspec | typevartuple
+typeparams: '[' typeparam (',' typeparam)* [','] ']'
+
 decorator: '@' namedexpr_test NEWLINE
 decorators: decorator+
 decorated: decorators (classdef | funcdef | async_funcdef)
 async_funcdef: ASYNC funcdef
-funcdef: 'def' NAME parameters ['->' test] ':' suite
+funcdef: 'def' NAME [typeparams] parameters ['->' test] ':' suite
 parameters: '(' [typedargslist] ')'
 
 # The following definition for typedarglist is equivalent to this set of rules:
@@ -74,7 +80,7 @@ vfplist: vfpdef (',' vfpdef)* [',']
 
 stmt: simple_stmt | compound_stmt
 simple_stmt: small_stmt (';' small_stmt)* [';'] NEWLINE
-small_stmt: (expr_stmt | print_stmt  | del_stmt | pass_stmt | flow_stmt |
+small_stmt: (type_stmt | expr_stmt | print_stmt  | del_stmt | pass_stmt | flow_stmt |
              import_stmt | global_stmt | exec_stmt | assert_stmt)
 expr_stmt: testlist_star_expr (annassign | augassign (yield_expr|testlist) |
                      ('=' (yield_expr|testlist_star_expr))*)
@@ -105,6 +111,7 @@ dotted_name: NAME ('.' NAME)*
 global_stmt: ('global' | 'nonlocal') NAME (',' NAME)*
 exec_stmt: 'exec' expr ['in' test [',' test]]
 assert_stmt: 'assert' test [',' test]
+type_stmt: "type" NAME [typeparams] '=' expr
 
 compound_stmt: if_stmt | while_stmt | for_stmt | try_stmt | with_stmt | funcdef | classdef | decorated | async_stmt | match_stmt
 async_stmt: ASYNC (funcdef | with_stmt | for_stmt)
@@ -113,9 +120,9 @@ while_stmt: 'while' namedexpr_test ':' suite ['else' ':' suite]
 for_stmt: 'for' exprlist 'in' testlist_star_expr ':' suite ['else' ':' suite]
 try_stmt: ('try' ':' suite
            ((except_clause ':' suite)+
-           ['else' ':' suite]
-           ['finally' ':' suite] |
-          'finally' ':' suite))
+	    ['else' ':' suite]
+	    ['finally' ':' suite] |
+	   'finally' ':' suite))
 with_stmt: 'with' asexpr_test (',' asexpr_test)*  ':' suite
 
 # NB compile.c makes sure that the default except clause is last
@@ -172,9 +179,9 @@ testlist: test (',' test)* [',']
 dictsetmaker: ( ((test ':' asexpr_test | '**' expr)
                  (comp_for | (',' (test ':' asexpr_test | '**' expr))* [','])) |
                 ((test [':=' test] | star_expr)
-               (comp_for | (',' (test [':=' test] | star_expr))* [','])) )
+		 (comp_for | (',' (test [':=' test] | star_expr))* [','])) )
 
-classdef: 'class' NAME ['(' [arglist] ')'] ':' suite
+classdef: 'class' NAME [typeparams] ['(' [arglist] ')'] ':' suite
 
 arglist: argument (',' argument)* [',']
 
@@ -186,10 +193,10 @@ arglist: argument (',' argument)* [',']
 # multiple (test comp_for) arguments are blocked; keyword unpackings
 # that precede iterable unpackings are blocked; etc.
 argument: ( test [comp_for] |
-            test ':=' test |
+            test ':=' test [comp_for] |
             test 'as' test |
             test '=' asexpr_test |
-           '**' test |
+	    '**' test |
             '*' test )
 
 comp_iter: comp_for | comp_if

@@ -28,6 +28,7 @@ from .nodes import (
     is_multiline_string,
     is_one_sequence_between,
     is_type_comment,
+    is_type_ignore_comment,
     is_with_or_async_with_stmt,
     replace_child,
     syms,
@@ -251,7 +252,7 @@ class Line:
             for comment in comments:
                 if is_type_comment(comment):
                     if comment_seen or (
-                        not is_type_comment(comment, " ignore")
+                        not is_type_ignore_comment(comment)
                         and leaf_id not in ignored_ids
                     ):
                         return True
@@ -288,7 +289,7 @@ class Line:
             # line.
             for node in self.leaves[-2:]:
                 for comment in self.comments.get(id(node), []):
-                    if is_type_comment(comment, " ignore"):
+                    if is_type_ignore_comment(comment):
                         return True
 
         return False
@@ -634,6 +635,8 @@ class EmptyLineTracker:
             and self.previous_line.is_class
             and current_line.is_triple_quoted_string
         ):
+            if Preview.no_blank_line_before_class_docstring in current_line.mode:
+                return 0, 1
             return before, 1
 
         if self.previous_line and self.previous_line.opens_block:
@@ -790,7 +793,7 @@ def is_line_short_enough(  # noqa: C901
     # store the leaves that contain parts of the MLS
     multiline_string_contexts: List[LN] = []
 
-    max_level_to_update = math.inf  # track the depth of the MLS
+    max_level_to_update: Union[int, float] = math.inf  # track the depth of the MLS
     for i, leaf in enumerate(line.leaves):
         if max_level_to_update == math.inf:
             had_comma: Optional[int] = None

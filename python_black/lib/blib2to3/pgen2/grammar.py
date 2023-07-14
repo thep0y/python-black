@@ -28,7 +28,7 @@ DFAS = Tuple[DFA, Dict[int, int]]
 Path = Union[str, "os.PathLike[str]"]
 
 
-class Grammar(object):
+class Grammar:
     """Pgen parsing tables conversion class.
 
     Once initialized, this class supplies the grammar tables for the

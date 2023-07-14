@@ -1,10 +1,7 @@
+import re
 from dataclasses import dataclass
 from functools import lru_cache
-import re
 from typing import Iterator, List, Optional, Union, Final
-
-from ..blib2to3.pytree import Node, Leaf
-from ..blib2to3.pgen2 import token
 
 from .nodes import (
     CLOSING_BRACKETS,
@@ -15,6 +12,8 @@ from .nodes import (
     preceding_leaf,
     syms,
 )
+from ..blib2to3.pgen2 import token
+from ..blib2to3.pytree import Node, Leaf
 
 # types
 LN = Union[Leaf, Node]

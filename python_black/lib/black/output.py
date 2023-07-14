@@ -4,6 +4,9 @@ The double calls are for patching purposes in tests.
 """
 
 import sublime
+import tempfile
+
+from ..mypy_extensions import mypyc_attr
 
 
 def out(msg: str):
@@ -57,3 +60,16 @@ def color_diff(contents: str) -> str:
             line = "\033[31m" + line + "\033[0m"  # red, reset
         lines[i] = line
     return "\n".join(lines)
+
+
+@mypyc_attr(patchable=True)
+def dump_to_file(*output: str, ensure_final_newline: bool = True) -> str:
+    """Dump `output` to a temporary file. Return path to the file."""
+    with tempfile.NamedTemporaryFile(
+        mode="w", prefix="blk_", suffix=".log", delete=False, encoding="utf8"
+    ) as f:
+        for lines in output:
+            f.write(lines)
+            if ensure_final_newline and lines and lines[-1] != "\n":
+                f.write("\n")
+    return f.name

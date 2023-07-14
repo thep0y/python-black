@@ -1,9 +1,18 @@
 import io
+import sys
 import tokenize
+import traceback
 from enum import Enum
 from contextlib import contextmanager
-from typing import Generator, Iterator, List, Set, Tuple, Optional
+from dataclasses import replace
+from datetime import datetime, timezone
+from json.decoder import JSONDecodeError
+from pathlib import Path
+from typing import Generator, Iterator, List, Set, Tuple, Optional, Any
 
+from .files import (
+    wrap_stream_for_windows,
+)
 from .nodes import (
     STARS,
     syms,
@@ -11,6 +20,9 @@ from .nodes import (
     is_string_token,
     is_number_token,
 )
+from .output import color_diff, diff, dump_to_file
+from .parsing import parse_ast, stringify_ast
+from .report import Changed, NothingChanged
 from .lines import Line, EmptyLineTracker, LinesBlock
 from .linegen import transform_line, LineGenerator, LN
 from .comments import normalize_fmt_off
@@ -56,6 +68,149 @@ class WriteBack(Enum):
             return cls.COLOR_DIFF
 
         return cls.DIFF if diff else cls.YES
+
+
+def assert_equivalent(src: str, dst: str) -> None:
+    """Raise AssertionError if `src` and `dst` aren't equivalent."""
+    try:
+        src_ast = parse_ast(src)
+    except Exception as exc:
+        raise AssertionError(
+            "cannot use --safe with this file; failed to parse source file AST: "
+            f"{exc}\n"
+            "This could be caused by running Black with an older Python version "
+            "that does not support new syntax used in your source file."
+        ) from exc
+
+    try:
+        dst_ast = parse_ast(dst)
+    except Exception as exc:
+        log = dump_to_file("".join(traceback.format_tb(exc.__traceback__)), dst)
+        raise AssertionError(
+            f"INTERNAL ERROR: Black produced invalid code: {exc}. "
+            "Please report a bug on https://github.com/psf/black/issues.  "
+            f"This invalid output might be helpful: {log}"
+        ) from None
+
+    src_ast_str = "\n".join(stringify_ast(src_ast))
+    dst_ast_str = "\n".join(stringify_ast(dst_ast))
+    if src_ast_str != dst_ast_str:
+        log = dump_to_file(diff(src_ast_str, dst_ast_str, "src", "dst"))
+        raise AssertionError(
+            "INTERNAL ERROR: Black produced code that is not equivalent to the"
+            " source.  Please report a bug on "
+            f"https://github.com/psf/black/issues.  This diff might be helpful: {log}"
+        ) from None
+
+
+def assert_stable(src: str, dst: str, mode: Mode) -> None:
+    """Raise AssertionError if `dst` reformats differently the second time."""
+    # We shouldn't call format_str() here, because that formats the string
+    # twice and may hide a bug where we bounce back and forth between two
+    # versions.
+    newdst = _format_str_once(dst, mode=mode)
+    if dst != newdst:
+        log = dump_to_file(
+            str(mode),
+            diff(src, dst, "source", "first pass"),
+            diff(dst, newdst, "first pass", "second pass"),
+        )
+        raise AssertionError(
+            "INTERNAL ERROR: Black produced different code on the second pass of the"
+            " formatter.  Please report a bug on https://github.com/psf/black/issues."
+            f"  This diff might be helpful: {log}"
+        ) from None
+
+
+def check_stability_and_equivalence(
+    src_contents: str, dst_contents: str, *, mode: Mode
+) -> None:
+    """Perform stability and equivalence checks.
+
+    Raise AssertionError if source and destination contents are not
+    equivalent, or if a second pass of the formatter would format the
+    content differently.
+    """
+    assert_equivalent(src_contents, dst_contents)
+    assert_stable(src_contents, dst_contents, mode=mode)
+
+
+def format_file_contents(src_contents: str, *, fast: bool, mode: Mode) -> FileContent:
+    """Reformat contents of a file and return new contents.
+
+    If `fast` is False, additionally confirm that the reformatted code is
+    valid by calling :func:`assert_equivalent` and :func:`assert_stable` on it.
+    `mode` is passed to :func:`format_str`.
+    """
+    dst_contents = format_str(src_contents, mode=mode)
+    if src_contents == dst_contents:
+        raise NothingChanged
+
+    if not fast and not mode.is_ipynb:
+        # Jupyter notebooks will already have been checked above.
+        check_stability_and_equivalence(src_contents, dst_contents, mode=mode)
+    return dst_contents
+
+
+def format_file_in_place(
+    src: Path,
+    fast: bool,
+    mode: Mode,
+    write_back: WriteBack = WriteBack.NO,
+    lock: Any = None,  # multiprocessing.Manager().Lock() is some crazy proxy
+) -> bool:
+    """Format file under `src` path. Return True if changed.
+
+    If `write_back` is DIFF, write a diff to stdout. If it is YES, write reformatted
+    code to the file.
+    `mode` and `fast` options are passed to :func:`format_file_contents`.
+    """
+    if src.suffix == ".pyi":
+        mode = replace(mode, is_pyi=True)
+    elif src.suffix == ".ipynb":
+        mode = replace(mode, is_ipynb=True)
+
+    then = datetime.fromtimestamp(src.stat().st_mtime, timezone.utc)
+    header = b""
+    with open(src, "rb") as buf:
+        if mode.skip_source_first_line:
+            header = buf.readline()
+        src_contents, encoding, newline = decode_bytes(buf.read())
+    try:
+        dst_contents = format_file_contents(src_contents, fast=fast, mode=mode)
+    except NothingChanged:
+        return False
+    except JSONDecodeError:
+        raise ValueError(
+            f"File '{src}' cannot be parsed as valid Jupyter notebook."
+        ) from None
+    src_contents = header.decode(encoding) + src_contents
+    dst_contents = header.decode(encoding) + dst_contents
+
+    if write_back == WriteBack.YES:
+        with open(src, "w", encoding=encoding, newline=newline) as f:
+            f.write(dst_contents)
+    elif write_back in (WriteBack.DIFF, WriteBack.COLOR_DIFF):
+        now = datetime.now(timezone.utc)
+        src_name = f"{src}\t{then}"
+        dst_name = f"{src}\t{now}"
+        diff_contents = diff(src_contents, dst_contents, src_name, dst_name)
+
+        if write_back == WriteBack.COLOR_DIFF:
+            diff_contents = color_diff(diff_contents)
+
+        with lock or nullcontext():
+            f = io.TextIOWrapper(
+                sys.stdout.buffer,
+                encoding=encoding,
+                newline=newline,
+                write_through=True,
+            )
+            f = wrap_stream_for_windows(f)
+            f.write(diff_contents)
+            f.detach()
+
+    return True
 
 
 def format_str(src_contents: str, *, mode: Mode) -> str:
@@ -288,6 +443,9 @@ def get_features_used(  # noqa: C901
             and n.children[2].type == syms.star_expr
         ):
             features.add(Feature.VARIADIC_GENERICS)
+
+        elif n.type in (syms.type_stmt, syms.typeparams):
+            features.add(Feature.TYPE_PARAMS)
 
     return features
 

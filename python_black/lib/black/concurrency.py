@@ -1,3 +1,9 @@
+"""
+Formatting many files at once via multiprocessing. Contains entrypoint and utilities.
+
+NOTE: this module is only imported if we need to format several files at once.
+"""
+
 import asyncio
 import logging
 import os
@@ -8,7 +14,7 @@ from multiprocessing import Manager
 from pathlib import Path
 from typing import Any, Iterable, Optional, Set
 
-from mypy_extensions import mypyc_attr
+from ..mypy_extensions import mypyc_attr
 
 from . import WriteBack, format_file_in_place
 from .cache import Cache, filter_cached, read_cache, write_cache
@@ -27,12 +33,8 @@ def cancel(tasks: Iterable["asyncio.Task[Any]"]) -> None:
 def shutdown(loop: asyncio.AbstractEventLoop) -> None:
     """Cancel all pending tasks on `loop`, wait for them, and close the loop."""
     try:
-        if sys.version_info[:2] >= (3, 7):
-            all_tasks = asyncio.all_tasks
-        else:
-            all_tasks = asyncio.Task.all_tasks
         # This part is borrowed from asyncio/runners.py in Python 3.7b2.
-        to_cancel = [task for task in all_tasks(loop) if not task.done()]
+        to_cancel = [task for task in asyncio.all_tasks(loop) if not task.done()]
         if not to_cancel:
             return
 
@@ -62,7 +64,8 @@ def reformat_many(
     """Reformat multiple files using a ProcessPoolExecutor."""
     executor: Executor
     if workers is None:
-        workers = os.cpu_count() or 1
+        workers = int(os.environ.get("BLACK_NUM_WORKERS", 0))
+        workers = workers or os.cpu_count() or 1
     if sys.platform == "win32":
         # Work around https://bugs.python.org/issue26903
         workers = min(workers, 60)

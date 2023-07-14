@@ -26,7 +26,6 @@ from ..blib2to3.pytree import NL, Leaf, Node, type_repr
 pygram.initialize(CACHE_DIR)
 syms: Final = pygram.python_symbols
 
-
 # types
 T = TypeVar("T")
 LN = Union[Leaf, Node]
@@ -182,9 +181,9 @@ def whitespace(leaf: Leaf, *, complex_subscript: bool) -> str:  # noqa: C901
     `complex_subscript` signals whether the given leaf is part of a subscription
     which has non-trivial arguments, like arithmetic expressions or function calls.
     """
-    NO: Final = ""
-    SPACE: Final = " "
-    DOUBLESPACE: Final = "  "
+    NO: Final[str] = ""
+    SPACE: Final[str] = " "
+    DOUBLESPACE: Final[str] = "  "
     t = leaf.type
     p = leaf.parent
     v = leaf.value
@@ -719,12 +718,20 @@ def is_multiline_string(leaf: Leaf) -> bool:
 
 def is_stub_suite(node: Node) -> bool:
     """Return True if `node` is a suite with a stub body."""
+
+    # If there is a comment, we want to keep it.
+    if node.prefix.strip():
+        return False
+
     if (
         len(node.children) != 4
         or node.children[0].type != token.NEWLINE
         or node.children[1].type != token.INDENT
         or node.children[3].type != token.DEDENT
     ):
+        return False
+
+    if node.children[3].prefix.strip():
         return False
 
     return is_stub_body(node.children[2])
@@ -740,7 +747,8 @@ def is_stub_body(node: LN) -> bool:
 
     child = node.children[0]
     return (
-        child.type == syms.atom
+        not child.prefix.strip()
+        and child.type == syms.atom
         and len(child.children) == 3
         and all(leaf == Leaf(token.DOT, ".") for leaf in child.children)
     )
@@ -817,12 +825,27 @@ def is_async_stmt_or_funcdef(leaf: Leaf) -> bool:
     )
 
 
-def is_type_comment(leaf: Leaf, suffix: str = "") -> bool:
-    """Return True if the given leaf is a special comment.
-    Only returns true for type comments for now."""
+def is_type_comment(leaf: Leaf) -> bool:
+    """Return True if the given leaf is a type comment. This function should only
+    be used for general type comments (excluding ignore annotations, which should
+    use `is_type_ignore_comment`). Note that general type comments are no longer
+    used in modern version of Python, this function may be deprecated in the future."""
     t = leaf.type
     v = leaf.value
-    return t in {token.COMMENT, STANDALONE_COMMENT} and v.startswith("# type:" + suffix)
+    return t in {token.COMMENT, STANDALONE_COMMENT} and v.startswith("# type:")
+
+
+def is_type_ignore_comment(leaf: Leaf) -> bool:
+    """Return True if the given leaf is a type comment with ignore annotation."""
+    t = leaf.type
+    v = leaf.value
+    return t in {token.COMMENT, STANDALONE_COMMENT} and is_type_ignore_comment_string(v)
+
+
+def is_type_ignore_comment_string(value: str) -> bool:
+    """Return True if the given string match with type comment with
+    ignore annotation."""
+    return value.startswith("# type: ignore")
 
 
 def wrap_in_parentheses(parent: Node, child: LN, *, visible: bool = True) -> None:
