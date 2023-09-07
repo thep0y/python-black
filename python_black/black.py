@@ -1,20 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Author:      thepoy
-# @Email:       thepoy@163.com
-# @File Name:   black.py
-# @Created At:  2022-02-04 10:51:04
-# @Modified At: 2023-02-12 19:14:13
-# @Modified By: thepoy
 
 import sublime
 import sys
 
 from pathlib import Path
-from typing import Optional, Any, Dict, Tuple, List, TypedDict
+from typing import Optional, Tuple, List
 
+from .lib import tomli as tomllib
 from .lib.black import format_str
-from .lib.black.files import parse_pyproject_toml
+from .lib.black.files import infer_target_version
 from .lib.black.mode import Mode, TargetVersion
 from .lib.black.const import DEFAULT_LINE_LENGTH, DEFAULT_INCLUDES
 from .types import BlackConfig, SublimeSettings
@@ -76,10 +71,10 @@ def read_pyproject_toml(
     Returns:
         Tuple[Optional[BlackConfig], Optional[str]]: config and config file
     """
-    try:
-        config: BlackConfig = parse_pyproject_toml(str(config_file))  # type: ignore
-    except (OSError, ValueError, FileNotFoundError) as e:
-        raise Exception(f"Error reading configuration file: {e}")
+    with config_file.open("rb") as f:
+        pyproject_toml = tomllib.load(f)
+    config = pyproject_toml.get("tool", {}).get("black", {})
+    config = {k.replace("--", "").replace("-", "_"): v for k, v in config.items()}
 
     logger.debug("project config: %s", config)
 
@@ -91,15 +86,23 @@ def read_pyproject_toml(
     if not config:
         return default_config, None
 
-    target_version = config.get("target_version")
-    if target_version is not None and not isinstance(target_version, list):
-        raise AttributeError("target-version: Config key target-version must be a list")
+    if "target_version" not in config:
+        inferred_target_version = infer_target_version(pyproject_toml)
+        if inferred_target_version is not None:
+            config["target_version"] = [v.name.lower() for v in inferred_target_version]
+        logger.debug("inferred target version: %s", inferred_target_version)
+    else:
+        target_version = config["target_version"]
+        if target_version is not None and not isinstance(target_version, list):
+            raise AttributeError(
+                "target-version: Config key target-version must be a list"
+            )
 
     default_map: BlackConfig = {}  # type: ignore
     if default_config:
         default_map.update(default_config)
 
-    default_map.update(config)
+    default_map.update(config)  # type: ignore
 
     logger.debug("configuration after applying `pyproject.toml`: %s", default_map)
 
@@ -164,7 +167,8 @@ def black_format_str(
 
     if not default_config:
         logger.info(
-            "smart mode is in use, but the black section is not found in the config file"
+            "Using smart mode, but no [black] section found in config file, "
+            "so no Python files in the current project will be formatted."
         )
         sublime.status_message("black: Black section is not found")
 

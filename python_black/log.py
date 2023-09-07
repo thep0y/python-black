@@ -205,5 +205,6 @@ def child_logger(name: str) -> logging.Logger:
     log = __logger.getChild(name.replace(f"{LOGGER_NAME}.", ""))
     log.setLevel(__logger.level)
     log.handlers = __logger.handlers
+    log.propagate = False
 
     return log

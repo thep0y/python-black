@@ -12,7 +12,7 @@
               "type": [
                 "string"
               ],
-              "default": true,
+              "default": "on",
               "enum": [
                 "on",
                 "off",

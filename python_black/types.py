@@ -14,10 +14,10 @@ from .mode import Mode
 class BlackConfig(TypedDict):
     target_version: List[str]
     line_length: int
-    string_normalization: bool
     is_pyi: bool
     skip_source_first_line: bool
-    magic_trailing_comma: bool
+    skip_string_normalization: bool
+    skip_magic_trailing_comma: bool
     include: str
 
 
