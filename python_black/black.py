@@ -94,9 +94,15 @@ def read_pyproject_toml(
     else:
         target_version = config["target_version"]
         if target_version is not None and not isinstance(target_version, list):
-            raise AttributeError(
-                "target-version: Config key target-version must be a list"
-            )
+            raise TypeError("target-version: Config key target-version must be a list")
+
+    exclude = config.get("exclude")
+    if exclude is not None and not isinstance(exclude, str):
+        raise TypeError("exclude: Config key exclude must be a string")
+
+    extend_exclude = config.get("extend_exclude")
+    if extend_exclude is not None and not isinstance(extend_exclude, str):
+        raise TypeError("extend-exclude: Config key extend-exclude must be a string")
 
     default_map: BlackConfig = {}  # type: ignore
     if default_config:
@@ -259,6 +265,7 @@ def black_format(
     project_settings: SublimeSettings,
     # preview: bool = False,
 ):
+    print(source)
     sublime.status_message("black: Formatting...")
 
     formatted = format_by_import_black_package(

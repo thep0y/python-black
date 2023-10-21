@@ -1,10 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Author:    thepoy
-# @Email:     thepoy@163.com
-# @File Name: log.py
-# @Created:   2022-10-29 16:21:52
-# @Modified:  2023-02-08 11:15:37
 
 import os
 import logging

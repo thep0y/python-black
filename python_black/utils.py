@@ -1,11 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Author:      thepoy
-# @Email:       thepoy@163.com
-# @File Name:   utils.py
-# @Created At:  2022-02-04 10:51:04
-# @Modified At: 2023-02-12 19:20:10
-# @Modified By: thepoy
 
 import sublime
 import os
@@ -123,6 +117,7 @@ def replace_text(
         lines = text.split("\n")
         if not lines[-1]:
             text = "\n".join(lines[:-1])
+
     view.replace(edit, region, text)
     restore_state(view, state)
     sublime.status_message("black: Formatted")

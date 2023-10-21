@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-# @Author:      thepoy
-# @Email:       thepoy@163.com
-# @File Name:   black.pyi
-# @Created At:  2023-02-12 18:49:31
-# @Modified At: 2023-02-12 19:12:40
-# @Modified By: thepoy
 
 from typing import TypedDict, List
 from .mode import Mode
