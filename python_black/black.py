@@ -263,9 +263,7 @@ def black_format(
     smart_mode: bool,
     package_settings: SublimeSettings,
     project_settings: SublimeSettings,
-    # preview: bool = False,
 ):
-    print(source)
     sublime.status_message("black: Formatting...")
 
     formatted = format_by_import_black_package(
