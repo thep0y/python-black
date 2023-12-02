@@ -1,6 +1,5 @@
 import itertools
 import math
-import sys
 from dataclasses import dataclass, field
 from typing import (
     Callable,
@@ -15,15 +14,17 @@ from typing import (
     cast,
 )
 
-from .brackets import COMMA_PRIORITY, DOT_PRIORITY, BracketTracker
-from .mode import Mode, Preview
-from .nodes import (
+from black.brackets import COMMA_PRIORITY, DOT_PRIORITY, BracketTracker
+from black.mode import Mode, Preview
+from black.nodes import (
     BRACKETS,
     CLOSING_BRACKETS,
     OPENING_BRACKETS,
     STANDALONE_COMMENT,
     TEST_DESCENDANTS,
     child_towards,
+    is_docstring,
+    is_funcdef,
     is_import,
     is_multiline_string,
     is_one_sequence_between,
@@ -34,9 +35,9 @@ from .nodes import (
     syms,
     whitespace,
 )
-from .strings import str_width
-from ..blib2to3.pgen2 import token
-from ..blib2to3.pytree import Node, Leaf
+from black.strings import str_width
+from blib2to3.pgen2 import token
+from blib2to3.pytree import Leaf, Node
 
 # types
 T = TypeVar("T")
@@ -49,7 +50,7 @@ LN = Union[Leaf, Node]
 class Line:
     """Holds leaves and comments. Can be printed with `str(line)`."""
 
-    mode: Mode
+    mode: Mode = field(repr=False)
     depth: int = 0
     leaves: List[Leaf] = field(default_factory=list)
     # keys ordered like `leaves`
@@ -81,7 +82,9 @@ class Line:
             # Note: at this point leaf.prefix should be empty except for
             # imports, for which we only preserve newlines.
             leaf.prefix += whitespace(
-                leaf, complex_subscript=self.is_complex_subscript(leaf)
+                leaf,
+                complex_subscript=self.is_complex_subscript(leaf),
+                mode=self.mode,
             )
         if self.inside_brackets or not preformatted or track_bracket:
             self.bracket_tracker.mark(leaf)
@@ -99,7 +102,10 @@ class Line:
         Raises ValueError when any `leaf` is appended after a standalone comment
         or when a standalone comment is not the first leaf on the line.
         """
-        if self.bracket_tracker.depth == 0:
+        if (
+            self.bracket_tracker.depth == 0
+            or self.bracket_tracker.any_open_for_or_lambda()
+        ):
             if self.is_comment:
                 raise ValueError("cannot append to standalone comments")
 
@@ -166,6 +172,13 @@ class Line:
         )
 
     @property
+    def is_stub_def(self) -> bool:
+        """Is this line a function definition with a body consisting only of "..."?"""
+        return self.is_def and self.leaves[-4:] == [Leaf(token.COLON, ":")] + [
+            Leaf(token.DOT, ".") for _ in range(3)
+        ]
+
+    @property
     def is_class_paren_empty(self) -> bool:
         """Is this a class with no base classes but using parentheses?
 
@@ -184,11 +197,16 @@ class Line:
     @property
     def is_triple_quoted_string(self) -> bool:
         """Is the line a triple quoted string?"""
-        return (
-            bool(self)
-            and self.leaves[0].type == token.STRING
-            and self.leaves[0].value.startswith(('"""', "'''"))
-        )
+        if not self or self.leaves[0].type != token.STRING:
+            return False
+        value = self.leaves[0].value
+        if value.startswith(('"""', "'''")):
+            return True
+        if Preview.accept_raw_docstrings in self.mode and value.startswith(
+            ("r'''", 'r"""', "R'''", 'R"""')
+        ):
+            return True
+        return False
 
     @property
     def opens_block(self) -> bool:
@@ -217,12 +235,27 @@ class Line:
             leaf.fmt_pass_converted_first_leaf
         )
 
-    def contains_standalone_comments(self, depth_limit: int = sys.maxsize) -> bool:
+    def contains_standalone_comments(self) -> bool:
         """If so, needs to be split before emitting."""
         for leaf in self.leaves:
-            if leaf.type == STANDALONE_COMMENT and leaf.bracket_depth <= depth_limit:
+            if leaf.type == STANDALONE_COMMENT:
                 return True
 
+        return False
+
+    def contains_implicit_multiline_string_with_comments(self) -> bool:
+        """Chck if we have an implicit multiline string with comments on the line"""
+        for leaf_type, leaf_group_iterator in itertools.groupby(
+            self.leaves, lambda leaf: leaf.type
+        ):
+            if leaf_type != token.STRING:
+                continue
+            leaf_list = list(leaf_group_iterator)
+            if len(leaf_list) == 1:
+                continue
+            for leaf in leaf_list:
+                if self.comments_after(leaf):
+                    return True
         return False
 
     def contains_uncollapsable_type_comments(self) -> bool:
@@ -320,9 +353,9 @@ class Line:
 
         if closing.type == token.RSQB:
             if (
-                closing.parent
+                closing.parent is not None
                 and closing.parent.type == syms.trailer
-                and closing.opening_bracket
+                and closing.opening_bracket is not None
                 and is_one_sequence_between(
                     closing.opening_bracket,
                     closing,
@@ -332,22 +365,7 @@ class Line:
             ):
                 return False
 
-            if not ensure_removable:
-                return True
-
-            comma = self.leaves[-1]
-            if comma.parent is None:
-                return False
-            return (
-                comma.parent.type != syms.subscriptlist
-                or closing.opening_bracket is None
-                or not is_one_sequence_between(
-                    closing.opening_bracket,
-                    closing,
-                    self.leaves,
-                    brackets=(token.LSQB, token.RSQB),
-                )
-            )
+            return True
 
         if self.is_import:
             return True
@@ -541,6 +559,16 @@ class EmptyLineTracker:
             if self.previous_line is None
             else before - previous_after
         )
+        if (
+            Preview.module_docstring_newlines in current_line.mode
+            and self.previous_block
+            and self.previous_block.previous_block is None
+            and len(self.previous_block.original_line.leaves) == 1
+            and self.previous_block.original_line.is_triple_quoted_string
+            and not (current_line.is_class or current_line.is_def)
+        ):
+            before = 1
+
         block = LinesBlock(
             mode=self.mode,
             previous_block=self.previous_block,
@@ -578,17 +606,24 @@ class EmptyLineTracker:
             first_leaf.prefix = ""
         else:
             before = 0
+
+        user_had_newline = bool(before)
         depth = current_line.depth
+
+        previous_def = None
         while self.previous_defs and self.previous_defs[-1].depth >= depth:
+            previous_def = self.previous_defs.pop()
+
+        if previous_def is not None:
+            assert self.previous_line is not None
             if self.mode.is_pyi:
-                assert self.previous_line is not None
                 if depth and not current_line.is_def and self.previous_line.is_def:
                     # Empty lines between attributes and methods should be preserved.
-                    before = min(1, before)
+                    before = 1 if user_had_newline else 0
                 elif (
                     Preview.blank_line_after_nested_stub_class in self.mode
-                    and self.previous_defs[-1].is_class
-                    and not self.previous_defs[-1].is_stub_class
+                    and previous_def.is_class
+                    and not previous_def.is_stub_class
                 ):
                     before = 1
                 elif depth:
@@ -600,7 +635,7 @@ class EmptyLineTracker:
                     before = 1
                 elif (
                     not depth
-                    and self.previous_defs[-1].depth
+                    and previous_def.depth
                     and current_line.leaves[-1].type == token.COLON
                     and (
                         current_line.leaves[0].value
@@ -617,9 +652,11 @@ class EmptyLineTracker:
                     before = 1
                 else:
                     before = 2
-            self.previous_defs.pop()
+
         if current_line.is_decorator or current_line.is_def or current_line.is_class:
-            return self._maybe_empty_lines_for_class_or_def(current_line, before)
+            return self._maybe_empty_lines_for_class_or_def(
+                current_line, before, user_had_newline
+            )
 
         if (
             self.previous_line
@@ -639,12 +676,35 @@ class EmptyLineTracker:
                 return 0, 1
             return before, 1
 
-        if self.previous_line and self.previous_line.opens_block:
+        is_empty_first_line_ok = (
+            Preview.allow_empty_first_line_before_new_block_or_comment
+            in current_line.mode
+            and (
+                # If it's a standalone comment
+                current_line.leaves[0].type == STANDALONE_COMMENT
+                # If it opens a new block
+                or current_line.opens_block
+                # If it's a triple quote comment (but not at the start of a funcdef)
+                or (
+                    is_docstring(current_line.leaves[0])
+                    and self.previous_line
+                    and self.previous_line.leaves[0]
+                    and self.previous_line.leaves[0].parent
+                    and not is_funcdef(self.previous_line.leaves[0].parent)
+                )
+            )
+        )
+
+        if (
+            self.previous_line
+            and self.previous_line.opens_block
+            and not is_empty_first_line_ok
+        ):
             return 0, 0
         return before, 0
 
-    def _maybe_empty_lines_for_class_or_def(
-        self, current_line: Line, before: int
+    def _maybe_empty_lines_for_class_or_def(  # noqa: C901
+        self, current_line: Line, before: int, user_had_newline: bool
     ) -> Tuple[int, int]:
         if not current_line.is_decorator:
             self.previous_defs.append(current_line)
@@ -693,6 +753,17 @@ class EmptyLineTracker:
                     newlines = 0
                 else:
                     newlines = 1
+            # Remove case `self.previous_line.depth > current_line.depth` below when
+            # this becomes stable.
+            #
+            # Don't inspect the previous line if it's part of the body of the previous
+            # statement in the same level, we always want a blank line if there's
+            # something with a body preceding.
+            elif (
+                Preview.blank_line_between_nested_and_def_stub_file in current_line.mode
+                and self.previous_line.depth > current_line.depth
+            ):
+                newlines = 1
             elif (
                 current_line.is_def or current_line.is_decorator
             ) and not self.previous_line.is_def:
@@ -710,6 +781,14 @@ class EmptyLineTracker:
                 newlines = 0
         else:
             newlines = 1 if current_line.depth else 2
+            # If a user has left no space after a dummy implementation, don't insert
+            # new lines. This is useful for instance for @overload or Protocols.
+            if (
+                Preview.dummy_implementations in self.mode
+                and self.previous_line.is_stub_def
+                and not user_had_newline
+            ):
+                newlines = 0
         if comment_to_add_newlines is not None:
             previous_block = comment_to_add_newlines.previous_block
             if previous_block is not None:
@@ -890,6 +969,23 @@ def can_omit_invisible_parens(
     are too long.
     """
     line = rhs.body
+
+    # We need optional parens in order to split standalone comments to their own lines
+    # if there are no nested parens around the standalone comments
+    closing_bracket: Optional[Leaf] = None
+    for leaf in reversed(line.leaves):
+        if closing_bracket and leaf is closing_bracket.opening_bracket:
+            closing_bracket = None
+        if leaf.type == STANDALONE_COMMENT and not closing_bracket:
+            return False
+        if (
+            not closing_bracket
+            and leaf.type in CLOSING_BRACKETS
+            and leaf.opening_bracket in line.leaves
+            and leaf.value
+        ):
+            closing_bracket = leaf
+
     bt = line.bracket_tracker
     if not bt.delimiters:
         # Without delimiters the optional parentheses are useless.

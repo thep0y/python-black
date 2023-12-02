@@ -3,26 +3,56 @@
 The double calls are for patching purposes in tests.
 """
 
-import sublime
+import json
 import tempfile
+from typing import Any, Optional
 
-from ..mypy_extensions import mypyc_attr
-
-
-def out(msg: str):
-    sublime.status_message(f"black: {msg}")
+from click import echo, style
+from mypy_extensions import mypyc_attr
 
 
-def err(msg: str):
-    sublime.status_message(f"black error: {msg}")
+@mypyc_attr(patchable=True)
+def _out(message: Optional[str] = None, nl: bool = True, **styles: Any) -> None:
+    if message is not None:
+        if "bold" not in styles:
+            styles["bold"] = True
+        message = style(message, **styles)
+    echo(message, nl=nl, err=True)
 
 
-def show_error_panel(text: str):
-    view = sublime.active_window().get_output_panel("black")
-    view.set_read_only(False)
-    view.run_command("black_output", {"text": text})
-    view.set_read_only(True)
-    sublime.active_window().run_command("show_panel", {"panel": "output.black"})
+@mypyc_attr(patchable=True)
+def _err(message: Optional[str] = None, nl: bool = True, **styles: Any) -> None:
+    if message is not None:
+        if "fg" not in styles:
+            styles["fg"] = "red"
+        message = style(message, **styles)
+    echo(message, nl=nl, err=True)
+
+
+@mypyc_attr(patchable=True)
+def out(message: Optional[str] = None, nl: bool = True, **styles: Any) -> None:
+    _out(message, nl=nl, **styles)
+
+
+def err(message: Optional[str] = None, nl: bool = True, **styles: Any) -> None:
+    _err(message, nl=nl, **styles)
+
+
+def ipynb_diff(a: str, b: str, a_name: str, b_name: str) -> str:
+    """Return a unified diff string between each cell in notebooks `a` and `b`."""
+    a_nb = json.loads(a)
+    b_nb = json.loads(b)
+    diff_lines = [
+        diff(
+            "".join(a_nb["cells"][cell_number]["source"]) + "\n",
+            "".join(b_nb["cells"][cell_number]["source"]) + "\n",
+            f"{a_name}:cell_{cell_number}",
+            f"{b_name}:cell_{cell_number}",
+        )
+        for cell_number, cell in enumerate(a_nb["cells"])
+        if cell["cell_type"] == "code"
+    ]
+    return "".join(diff_lines)
 
 
 def diff(a: str, b: str, a_name: str, b_name: str) -> str:
