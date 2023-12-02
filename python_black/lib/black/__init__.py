@@ -28,8 +28,8 @@ from typing import (
     Union,
 )
 
-import click
-from click.core import ParameterSource
+# import click
+# from click.core import ParameterSource
 from ..mypy_extensions import mypyc_attr
 from ..pathspec import PathSpec
 from ..pathspec.patterns.gitwildmatch import GitWildMatchPatternError
@@ -116,648 +116,648 @@ class WriteBack(Enum):
 FileMode = Mode
 
 
-def read_pyproject_toml(
-    ctx: click.Context, param: click.Parameter, value: Optional[str]
-) -> Optional[str]:
-    """Inject Black configuration from "pyproject.toml" into defaults in `ctx`.
+# def read_pyproject_toml(
+#     ctx: click.Context, param: click.Parameter, value: Optional[str]
+# ) -> Optional[str]:
+#     """Inject Black configuration from "pyproject.toml" into defaults in `ctx`.
 
-    Returns the path to a successfully found and read configuration file, None
-    otherwise.
-    """
-    if not value:
-        value = find_pyproject_toml(
-            ctx.params.get("src", ()), ctx.params.get("stdin_filename", None)
-        )
-        if value is None:
-            return None
+#     Returns the path to a successfully found and read configuration file, None
+#     otherwise.
+#     """
+#     if not value:
+#         value = find_pyproject_toml(
+#             ctx.params.get("src", ()), ctx.params.get("stdin_filename", None)
+#         )
+#         if value is None:
+#             return None
 
-    try:
-        config = parse_pyproject_toml(value)
-    except (OSError, ValueError) as e:
-        raise click.FileError(
-            filename=value, hint=f"Error reading configuration file: {e}"
-        ) from None
+#     try:
+#         config = parse_pyproject_toml(value)
+#     except (OSError, ValueError) as e:
+#         raise click.FileError(
+#             filename=value, hint=f"Error reading configuration file: {e}"
+#         ) from None
 
-    if not config:
-        return None
-    else:
-        # Sanitize the values to be Click friendly. For more information please see:
-        # https://github.com/psf/black/issues/1458
-        # https://github.com/pallets/click/issues/1567
-        config = {
-            k: str(v) if not isinstance(v, (list, dict)) else v
-            for k, v in config.items()
-        }
+#     if not config:
+#         return None
+#     else:
+#         # Sanitize the values to be Click friendly. For more information please see:
+#         # https://github.com/psf/black/issues/1458
+#         # https://github.com/pallets/click/issues/1567
+#         config = {
+#             k: str(v) if not isinstance(v, (list, dict)) else v
+#             for k, v in config.items()
+#         }
 
-    target_version = config.get("target_version")
-    if target_version is not None and not isinstance(target_version, list):
-        raise click.BadOptionUsage(
-            "target-version", "Config key target-version must be a list"
-        )
+#     target_version = config.get("target_version")
+#     if target_version is not None and not isinstance(target_version, list):
+#         raise click.BadOptionUsage(
+#             "target-version", "Config key target-version must be a list"
+#         )
 
-    exclude = config.get("exclude")
-    if exclude is not None and not isinstance(exclude, str):
-        raise click.BadOptionUsage("exclude", "Config key exclude must be a string")
+#     exclude = config.get("exclude")
+#     if exclude is not None and not isinstance(exclude, str):
+#         raise click.BadOptionUsage("exclude", "Config key exclude must be a string")
 
-    extend_exclude = config.get("extend_exclude")
-    if extend_exclude is not None and not isinstance(extend_exclude, str):
-        raise click.BadOptionUsage(
-            "extend-exclude", "Config key extend-exclude must be a string"
-        )
+#     extend_exclude = config.get("extend_exclude")
+#     if extend_exclude is not None and not isinstance(extend_exclude, str):
+#         raise click.BadOptionUsage(
+#             "extend-exclude", "Config key extend-exclude must be a string"
+#         )
 
-    line_ranges = config.get("line_ranges")
-    if line_ranges is not None:
-        raise click.BadOptionUsage(
-            "line-ranges", "Cannot use line-ranges in the pyproject.toml file."
-        )
+#     line_ranges = config.get("line_ranges")
+#     if line_ranges is not None:
+#         raise click.BadOptionUsage(
+#             "line-ranges", "Cannot use line-ranges in the pyproject.toml file."
+#         )
 
-    default_map: Dict[str, Any] = {}
-    if ctx.default_map:
-        default_map.update(ctx.default_map)
-    default_map.update(config)
+#     default_map: Dict[str, Any] = {}
+#     if ctx.default_map:
+#         default_map.update(ctx.default_map)
+#     default_map.update(config)
 
-    ctx.default_map = default_map
-    return value
-
-
-def target_version_option_callback(
-    c: click.Context, p: Union[click.Option, click.Parameter], v: Tuple[str, ...]
-) -> List[TargetVersion]:
-    """Compute the target versions from a --target-version flag.
-
-    This is its own function because mypy couldn't infer the type correctly
-    when it was a lambda, causing mypyc trouble.
-    """
-    return [TargetVersion[val.upper()] for val in v]
+#     ctx.default_map = default_map
+#     return value
 
 
-def re_compile_maybe_verbose(regex: str) -> Pattern[str]:
-    """Compile a regular expression string in `regex`.
+# def target_version_option_callback(
+#     c: click.Context, p: Union[click.Option, click.Parameter], v: Tuple[str, ...]
+# ) -> List[TargetVersion]:
+#     """Compute the target versions from a --target-version flag.
 
-    If it contains newlines, use verbose mode.
-    """
-    if "\n" in regex:
-        regex = "(?x)" + regex
-    compiled: Pattern[str] = re.compile(regex)
-    return compiled
-
-
-def validate_regex(
-    ctx: click.Context,
-    param: click.Parameter,
-    value: Optional[str],
-) -> Optional[Pattern[str]]:
-    try:
-        return re_compile_maybe_verbose(value) if value is not None else None
-    except re.error as e:
-        raise click.BadParameter(f"Not a valid regular expression: {e}") from None
+#     This is its own function because mypy couldn't infer the type correctly
+#     when it was a lambda, causing mypyc trouble.
+#     """
+#     return [TargetVersion[val.upper()] for val in v]
 
 
-@click.command(
-    context_settings={"help_option_names": ["-h", "--help"]},
-    # While Click does set this field automatically using the docstring, mypyc
-    # (annoyingly) strips 'em so we need to set it here too.
-    help="The uncompromising code formatter.",
-)
-@click.option("-c", "--code", type=str, help="Format the code passed in as a string.")
-@click.option(
-    "-l",
-    "--line-length",
-    type=int,
-    default=DEFAULT_LINE_LENGTH,
-    help="How many characters per line to allow.",
-    show_default=True,
-)
-@click.option(
-    "-t",
-    "--target-version",
-    type=click.Choice([v.name.lower() for v in TargetVersion]),
-    callback=target_version_option_callback,
-    multiple=True,
-    help=(
-        "Python versions that should be supported by Black's output. By default, Black"
-        " will try to infer this from the project metadata in pyproject.toml. If this"
-        " does not yield conclusive results, Black will use per-file auto-detection."
-    ),
-)
-@click.option(
-    "--pyi",
-    is_flag=True,
-    help=(
-        "Format all input files like typing stubs regardless of file extension (useful"
-        " when piping source on standard input)."
-    ),
-)
-@click.option(
-    "--ipynb",
-    is_flag=True,
-    help=(
-        "Format all input files like Jupyter Notebooks regardless of file extension "
-        "(useful when piping source on standard input)."
-    ),
-)
-@click.option(
-    "--python-cell-magics",
-    multiple=True,
-    help=(
-        "When processing Jupyter Notebooks, add the given magic to the list"
-        f" of known python-magics ({', '.join(sorted(PYTHON_CELL_MAGICS))})."
-        " Useful for formatting cells with custom python magics."
-    ),
-    default=[],
-)
-@click.option(
-    "-x",
-    "--skip-source-first-line",
-    is_flag=True,
-    help="Skip the first line of the source code.",
-)
-@click.option(
-    "-S",
-    "--skip-string-normalization",
-    is_flag=True,
-    help="Don't normalize string quotes or prefixes.",
-)
-@click.option(
-    "-C",
-    "--skip-magic-trailing-comma",
-    is_flag=True,
-    help="Don't use trailing commas as a reason to split lines.",
-)
-@click.option(
-    "--experimental-string-processing",
-    is_flag=True,
-    hidden=True,
-    help="(DEPRECATED and now included in --preview) Normalize string literals.",
-)
-@click.option(
-    "--preview",
-    is_flag=True,
-    help=(
-        "Enable potentially disruptive style changes that may be added to Black's main"
-        " functionality in the next major release."
-    ),
-)
-@click.option(
-    "--check",
-    is_flag=True,
-    help=(
-        "Don't write the files back, just return the status. Return code 0 means"
-        " nothing would change. Return code 1 means some files would be reformatted."
-        " Return code 123 means there was an internal error."
-    ),
-)
-@click.option(
-    "--diff",
-    is_flag=True,
-    help="Don't write the files back, just output a diff for each file on stdout.",
-)
-@click.option(
-    "--line-ranges",
-    multiple=True,
-    metavar="START-END",
-    help=(
-        "When specified, _Black_ will try its best to only format these lines. This"
-        " option can be specified multiple times, and a union of the lines will be"
-        " formatted. Each range must be specified as two integers connected by a `-`:"
-        " `<START>-<END>`. The `<START>` and `<END>` integer indices are 1-based and"
-        " inclusive on both ends."
-    ),
-    default=(),
-)
-@click.option(
-    "--color/--no-color",
-    is_flag=True,
-    help="Show colored diff. Only applies when `--diff` is given.",
-)
-@click.option(
-    "--fast/--safe",
-    is_flag=True,
-    help="If --fast given, skip temporary sanity checks. [default: --safe]",
-)
-@click.option(
-    "--required-version",
-    type=str,
-    help=(
-        "Require a specific version of Black to be running (useful for unifying results"
-        " across many environments e.g. with a pyproject.toml file). It can be"
-        " either a major version number or an exact version."
-    ),
-)
-@click.option(
-    "--include",
-    type=str,
-    default=DEFAULT_INCLUDES,
-    callback=validate_regex,
-    help=(
-        "A regular expression that matches files and directories that should be"
-        " included on recursive searches. An empty value means all files are included"
-        " regardless of the name. Use forward slashes for directories on all platforms"
-        " (Windows, too). Exclusions are calculated first, inclusions later."
-    ),
-    show_default=True,
-)
-@click.option(
-    "--exclude",
-    type=str,
-    callback=validate_regex,
-    help=(
-        "A regular expression that matches files and directories that should be"
-        " excluded on recursive searches. An empty value means no paths are excluded."
-        " Use forward slashes for directories on all platforms (Windows, too)."
-        " Exclusions are calculated first, inclusions later. [default:"
-        f" {DEFAULT_EXCLUDES}]"
-    ),
-    show_default=False,
-)
-@click.option(
-    "--extend-exclude",
-    type=str,
-    callback=validate_regex,
-    help=(
-        "Like --exclude, but adds additional files and directories on top of the"
-        " excluded ones. (Useful if you simply want to add to the default)"
-    ),
-)
-@click.option(
-    "--force-exclude",
-    type=str,
-    callback=validate_regex,
-    help=(
-        "Like --exclude, but files and directories matching this regex will be "
-        "excluded even when they are passed explicitly as arguments."
-    ),
-)
-@click.option(
-    "--stdin-filename",
-    type=str,
-    is_eager=True,
-    help=(
-        "The name of the file when passing it through stdin. Useful to make "
-        "sure Black will respect --force-exclude option on some "
-        "editors that rely on using stdin."
-    ),
-)
-@click.option(
-    "-W",
-    "--workers",
-    type=click.IntRange(min=1),
-    default=None,
-    help=(
-        "Number of parallel workers [default: BLACK_NUM_WORKERS environment variable "
-        "or number of CPUs in the system]"
-    ),
-)
-@click.option(
-    "-q",
-    "--quiet",
-    is_flag=True,
-    help=(
-        "Don't emit non-error messages to stderr. Errors are still emitted; silence"
-        " those with 2>/dev/null."
-    ),
-)
-@click.option(
-    "-v",
-    "--verbose",
-    is_flag=True,
-    help=(
-        "Also emit messages to stderr about files that were not changed or were ignored"
-        " due to exclusion patterns."
-    ),
-)
-@click.version_option(
-    version=__version__,
-    message=(
-        f"%(prog)s, %(version)s (compiled: {'yes' if COMPILED else 'no'})\n"
-        f"Python ({platform.python_implementation()}) {platform.python_version()}"
-    ),
-)
-@click.argument(
-    "src",
-    nargs=-1,
-    type=click.Path(
-        exists=True, file_okay=True, dir_okay=True, readable=True, allow_dash=True
-    ),
-    is_eager=True,
-    metavar="SRC ...",
-)
-@click.option(
-    "--config",
-    type=click.Path(
-        exists=True,
-        file_okay=True,
-        dir_okay=False,
-        readable=True,
-        allow_dash=False,
-        path_type=str,
-    ),
-    is_eager=True,
-    callback=read_pyproject_toml,
-    help="Read configuration from FILE path.",
-)
-@click.pass_context
-def main(  # noqa: C901
-    ctx: click.Context,
-    code: Optional[str],
-    line_length: int,
-    target_version: List[TargetVersion],
-    check: bool,
-    diff: bool,
-    line_ranges: Sequence[str],
-    color: bool,
-    fast: bool,
-    pyi: bool,
-    ipynb: bool,
-    python_cell_magics: Sequence[str],
-    skip_source_first_line: bool,
-    skip_string_normalization: bool,
-    skip_magic_trailing_comma: bool,
-    experimental_string_processing: bool,
-    preview: bool,
-    quiet: bool,
-    verbose: bool,
-    required_version: Optional[str],
-    include: Pattern[str],
-    exclude: Optional[Pattern[str]],
-    extend_exclude: Optional[Pattern[str]],
-    force_exclude: Optional[Pattern[str]],
-    stdin_filename: Optional[str],
-    workers: Optional[int],
-    src: Tuple[str, ...],
-    config: Optional[str],
-) -> None:
-    """The uncompromising code formatter."""
-    ctx.ensure_object(dict)
+# def re_compile_maybe_verbose(regex: str) -> Pattern[str]:
+#     """Compile a regular expression string in `regex`.
 
-    if src and code is not None:
-        out(
-            main.get_usage(ctx)
-            + "\n\n'SRC' and 'code' cannot be passed simultaneously."
-        )
-        ctx.exit(1)
-    if not src and code is None:
-        out(main.get_usage(ctx) + "\n\nOne of 'SRC' or 'code' is required.")
-        ctx.exit(1)
-
-    root, method = (
-        find_project_root(src, stdin_filename) if code is None else (None, None)
-    )
-    ctx.obj["root"] = root
-
-    if verbose:
-        if root:
-            out(
-                f"Identified `{root}` as project root containing a {method}.",
-                fg="blue",
-            )
-
-        if config:
-            config_source = ctx.get_parameter_source("config")
-            user_level_config = str(find_user_pyproject_toml())
-            if config == user_level_config:
-                out(
-                    "Using configuration from user-level config at "
-                    f"'{user_level_config}'.",
-                    fg="blue",
-                )
-            elif config_source in (
-                ParameterSource.DEFAULT,
-                ParameterSource.DEFAULT_MAP,
-            ):
-                out("Using configuration from project root.", fg="blue")
-            else:
-                out(f"Using configuration in '{config}'.", fg="blue")
-            if ctx.default_map:
-                for param, value in ctx.default_map.items():
-                    out(f"{param}: {value}")
-
-    error_msg = "Oh no! 💥 💔 💥"
-    if (
-        required_version
-        and required_version != __version__
-        and required_version != __version__.split(".")[0]
-    ):
-        err(
-            f"{error_msg} The required version `{required_version}` does not match"
-            f" the running version `{__version__}`!"
-        )
-        ctx.exit(1)
-    if ipynb and pyi:
-        err("Cannot pass both `pyi` and `ipynb` flags!")
-        ctx.exit(1)
-
-    write_back = WriteBack.from_configuration(check=check, diff=diff, color=color)
-    if target_version:
-        versions = set(target_version)
-    else:
-        # We'll autodetect later.
-        versions = set()
-    mode = Mode(
-        target_versions=versions,
-        line_length=line_length,
-        is_pyi=pyi,
-        is_ipynb=ipynb,
-        skip_source_first_line=skip_source_first_line,
-        string_normalization=not skip_string_normalization,
-        magic_trailing_comma=not skip_magic_trailing_comma,
-        experimental_string_processing=experimental_string_processing,
-        preview=preview,
-        python_cell_magics=set(python_cell_magics),
-    )
-
-    lines: List[Tuple[int, int]] = []
-    if line_ranges:
-        if ipynb:
-            err("Cannot use --line-ranges with ipynb files.")
-            ctx.exit(1)
-
-        try:
-            lines = parse_line_ranges(line_ranges)
-        except ValueError as e:
-            err(str(e))
-            ctx.exit(1)
-
-    if code is not None:
-        # Run in quiet mode by default with -c; the extra output isn't useful.
-        # You can still pass -v to get verbose output.
-        quiet = True
-
-    report = Report(check=check, diff=diff, quiet=quiet, verbose=verbose)
-
-    if code is not None:
-        reformat_code(
-            content=code,
-            fast=fast,
-            write_back=write_back,
-            mode=mode,
-            report=report,
-            lines=lines,
-        )
-    else:
-        assert root is not None  # root is only None if code is not None
-        try:
-            sources = get_sources(
-                root=root,
-                src=src,
-                quiet=quiet,
-                verbose=verbose,
-                include=include,
-                exclude=exclude,
-                extend_exclude=extend_exclude,
-                force_exclude=force_exclude,
-                report=report,
-                stdin_filename=stdin_filename,
-            )
-        except GitWildMatchPatternError:
-            ctx.exit(1)
-
-        path_empty(
-            sources,
-            "No Python files are present to be formatted. Nothing to do 😴",
-            quiet,
-            verbose,
-            ctx,
-        )
-
-        if len(sources) == 1:
-            reformat_one(
-                src=sources.pop(),
-                fast=fast,
-                write_back=write_back,
-                mode=mode,
-                report=report,
-                lines=lines,
-            )
-        else:
-            from ..black.concurrency import reformat_many
-
-            if lines:
-                err("Cannot use --line-ranges to format multiple files.")
-                ctx.exit(1)
-            reformat_many(
-                sources=sources,
-                fast=fast,
-                write_back=write_back,
-                mode=mode,
-                report=report,
-                workers=workers,
-            )
-
-    if verbose or not quiet:
-        if code is None and (verbose or report.change_count or report.failure_count):
-            out()
-        out(error_msg if report.return_code else "All done! ✨ 🍰 ✨")
-        if code is None:
-            click.echo(str(report), err=True)
-    ctx.exit(report.return_code)
+#     If it contains newlines, use verbose mode.
+#     """
+#     if "\n" in regex:
+#         regex = "(?x)" + regex
+#     compiled: Pattern[str] = re.compile(regex)
+#     return compiled
 
 
-def get_sources(
-    *,
-    root: Path,
-    src: Tuple[str, ...],
-    quiet: bool,
-    verbose: bool,
-    include: Pattern[str],
-    exclude: Optional[Pattern[str]],
-    extend_exclude: Optional[Pattern[str]],
-    force_exclude: Optional[Pattern[str]],
-    report: "Report",
-    stdin_filename: Optional[str],
-) -> Set[Path]:
-    """Compute the set of files to be formatted."""
-    sources: Set[Path] = set()
-
-    using_default_exclude = exclude is None
-    exclude = re_compile_maybe_verbose(DEFAULT_EXCLUDES) if exclude is None else exclude
-    gitignore: Optional[Dict[Path, PathSpec]] = None
-    root_gitignore = get_gitignore(root)
-
-    for s in src:
-        if s == "-" and stdin_filename:
-            path = Path(stdin_filename)
-            is_stdin = True
-        else:
-            path = Path(s)
-            is_stdin = False
-
-        # Compare the logic here to the logic in `gen_python_files`.
-        if is_stdin or path.is_file():
-            root_relative_path = path.absolute().relative_to(root).as_posix()
-
-            root_relative_path = "/" + root_relative_path
-
-            # Hard-exclude any files that matches the `--force-exclude` regex.
-            if path_is_excluded(root_relative_path, force_exclude):
-                report.path_ignored(
-                    path, "matches the --force-exclude regular expression"
-                )
-                continue
-
-            normalized_path: Optional[str] = normalize_path_maybe_ignore(
-                path, root, report
-            )
-            if normalized_path is None:
-                if verbose:
-                    out(f'Skipping invalid source: "{normalized_path}"', fg="red")
-                continue
-
-            if is_stdin:
-                path = Path(f"{STDIN_PLACEHOLDER}{str(path)}")
-
-            if path.suffix == ".ipynb" and not jupyter_dependencies_are_installed(
-                warn=verbose or not quiet
-            ):
-                continue
-
-            if verbose:
-                out(f'Found input source: "{normalized_path}"', fg="blue")
-            sources.add(path)
-        elif path.is_dir():
-            path = root / (path.resolve().relative_to(root))
-            if verbose:
-                out(f'Found input source directory: "{path}"', fg="blue")
-
-            if using_default_exclude:
-                gitignore = {
-                    root: root_gitignore,
-                    path: get_gitignore(path),
-                }
-            sources.update(
-                gen_python_files(
-                    path.iterdir(),
-                    root,
-                    include,
-                    exclude,
-                    extend_exclude,
-                    force_exclude,
-                    report,
-                    gitignore,
-                    verbose=verbose,
-                    quiet=quiet,
-                )
-            )
-        elif s == "-":
-            if verbose:
-                out("Found input source stdin", fg="blue")
-            sources.add(path)
-        else:
-            err(f"invalid path: {s}")
-
-    return sources
+# def validate_regex(
+#     ctx: click.Context,
+#     param: click.Parameter,
+#     value: Optional[str],
+# ) -> Optional[Pattern[str]]:
+#     try:
+#         return re_compile_maybe_verbose(value) if value is not None else None
+#     except re.error as e:
+#         raise click.BadParameter(f"Not a valid regular expression: {e}") from None
 
 
-def path_empty(
-    src: Sized, msg: str, quiet: bool, verbose: bool, ctx: click.Context
-) -> None:
-    """
-    Exit if there is no `src` provided for formatting
-    """
-    if not src:
-        if verbose or not quiet:
-            out(msg)
-        ctx.exit(0)
+# @click.command(
+#     context_settings={"help_option_names": ["-h", "--help"]},
+#     # While Click does set this field automatically using the docstring, mypyc
+#     # (annoyingly) strips 'em so we need to set it here too.
+#     help="The uncompromising code formatter.",
+# )
+# @click.option("-c", "--code", type=str, help="Format the code passed in as a string.")
+# @click.option(
+#     "-l",
+#     "--line-length",
+#     type=int,
+#     default=DEFAULT_LINE_LENGTH,
+#     help="How many characters per line to allow.",
+#     show_default=True,
+# )
+# @click.option(
+#     "-t",
+#     "--target-version",
+#     type=click.Choice([v.name.lower() for v in TargetVersion]),
+#     callback=target_version_option_callback,
+#     multiple=True,
+#     help=(
+#         "Python versions that should be supported by Black's output. By default, Black"
+#         " will try to infer this from the project metadata in pyproject.toml. If this"
+#         " does not yield conclusive results, Black will use per-file auto-detection."
+#     ),
+# )
+# @click.option(
+#     "--pyi",
+#     is_flag=True,
+#     help=(
+#         "Format all input files like typing stubs regardless of file extension (useful"
+#         " when piping source on standard input)."
+#     ),
+# )
+# @click.option(
+#     "--ipynb",
+#     is_flag=True,
+#     help=(
+#         "Format all input files like Jupyter Notebooks regardless of file extension "
+#         "(useful when piping source on standard input)."
+#     ),
+# )
+# @click.option(
+#     "--python-cell-magics",
+#     multiple=True,
+#     help=(
+#         "When processing Jupyter Notebooks, add the given magic to the list"
+#         f" of known python-magics ({', '.join(sorted(PYTHON_CELL_MAGICS))})."
+#         " Useful for formatting cells with custom python magics."
+#     ),
+#     default=[],
+# )
+# @click.option(
+#     "-x",
+#     "--skip-source-first-line",
+#     is_flag=True,
+#     help="Skip the first line of the source code.",
+# )
+# @click.option(
+#     "-S",
+#     "--skip-string-normalization",
+#     is_flag=True,
+#     help="Don't normalize string quotes or prefixes.",
+# )
+# @click.option(
+#     "-C",
+#     "--skip-magic-trailing-comma",
+#     is_flag=True,
+#     help="Don't use trailing commas as a reason to split lines.",
+# )
+# @click.option(
+#     "--experimental-string-processing",
+#     is_flag=True,
+#     hidden=True,
+#     help="(DEPRECATED and now included in --preview) Normalize string literals.",
+# )
+# @click.option(
+#     "--preview",
+#     is_flag=True,
+#     help=(
+#         "Enable potentially disruptive style changes that may be added to Black's main"
+#         " functionality in the next major release."
+#     ),
+# )
+# @click.option(
+#     "--check",
+#     is_flag=True,
+#     help=(
+#         "Don't write the files back, just return the status. Return code 0 means"
+#         " nothing would change. Return code 1 means some files would be reformatted."
+#         " Return code 123 means there was an internal error."
+#     ),
+# )
+# @click.option(
+#     "--diff",
+#     is_flag=True,
+#     help="Don't write the files back, just output a diff for each file on stdout.",
+# )
+# @click.option(
+#     "--line-ranges",
+#     multiple=True,
+#     metavar="START-END",
+#     help=(
+#         "When specified, _Black_ will try its best to only format these lines. This"
+#         " option can be specified multiple times, and a union of the lines will be"
+#         " formatted. Each range must be specified as two integers connected by a `-`:"
+#         " `<START>-<END>`. The `<START>` and `<END>` integer indices are 1-based and"
+#         " inclusive on both ends."
+#     ),
+#     default=(),
+# )
+# @click.option(
+#     "--color/--no-color",
+#     is_flag=True,
+#     help="Show colored diff. Only applies when `--diff` is given.",
+# )
+# @click.option(
+#     "--fast/--safe",
+#     is_flag=True,
+#     help="If --fast given, skip temporary sanity checks. [default: --safe]",
+# )
+# @click.option(
+#     "--required-version",
+#     type=str,
+#     help=(
+#         "Require a specific version of Black to be running (useful for unifying results"
+#         " across many environments e.g. with a pyproject.toml file). It can be"
+#         " either a major version number or an exact version."
+#     ),
+# )
+# @click.option(
+#     "--include",
+#     type=str,
+#     default=DEFAULT_INCLUDES,
+#     callback=validate_regex,
+#     help=(
+#         "A regular expression that matches files and directories that should be"
+#         " included on recursive searches. An empty value means all files are included"
+#         " regardless of the name. Use forward slashes for directories on all platforms"
+#         " (Windows, too). Exclusions are calculated first, inclusions later."
+#     ),
+#     show_default=True,
+# )
+# @click.option(
+#     "--exclude",
+#     type=str,
+#     callback=validate_regex,
+#     help=(
+#         "A regular expression that matches files and directories that should be"
+#         " excluded on recursive searches. An empty value means no paths are excluded."
+#         " Use forward slashes for directories on all platforms (Windows, too)."
+#         " Exclusions are calculated first, inclusions later. [default:"
+#         f" {DEFAULT_EXCLUDES}]"
+#     ),
+#     show_default=False,
+# )
+# @click.option(
+#     "--extend-exclude",
+#     type=str,
+#     callback=validate_regex,
+#     help=(
+#         "Like --exclude, but adds additional files and directories on top of the"
+#         " excluded ones. (Useful if you simply want to add to the default)"
+#     ),
+# )
+# @click.option(
+#     "--force-exclude",
+#     type=str,
+#     callback=validate_regex,
+#     help=(
+#         "Like --exclude, but files and directories matching this regex will be "
+#         "excluded even when they are passed explicitly as arguments."
+#     ),
+# )
+# @click.option(
+#     "--stdin-filename",
+#     type=str,
+#     is_eager=True,
+#     help=(
+#         "The name of the file when passing it through stdin. Useful to make "
+#         "sure Black will respect --force-exclude option on some "
+#         "editors that rely on using stdin."
+#     ),
+# )
+# @click.option(
+#     "-W",
+#     "--workers",
+#     type=click.IntRange(min=1),
+#     default=None,
+#     help=(
+#         "Number of parallel workers [default: BLACK_NUM_WORKERS environment variable "
+#         "or number of CPUs in the system]"
+#     ),
+# )
+# @click.option(
+#     "-q",
+#     "--quiet",
+#     is_flag=True,
+#     help=(
+#         "Don't emit non-error messages to stderr. Errors are still emitted; silence"
+#         " those with 2>/dev/null."
+#     ),
+# )
+# @click.option(
+#     "-v",
+#     "--verbose",
+#     is_flag=True,
+#     help=(
+#         "Also emit messages to stderr about files that were not changed or were ignored"
+#         " due to exclusion patterns."
+#     ),
+# )
+# @click.version_option(
+#     version=__version__,
+#     message=(
+#         f"%(prog)s, %(version)s (compiled: {'yes' if COMPILED else 'no'})\n"
+#         f"Python ({platform.python_implementation()}) {platform.python_version()}"
+#     ),
+# )
+# @click.argument(
+#     "src",
+#     nargs=-1,
+#     type=click.Path(
+#         exists=True, file_okay=True, dir_okay=True, readable=True, allow_dash=True
+#     ),
+#     is_eager=True,
+#     metavar="SRC ...",
+# )
+# @click.option(
+#     "--config",
+#     type=click.Path(
+#         exists=True,
+#         file_okay=True,
+#         dir_okay=False,
+#         readable=True,
+#         allow_dash=False,
+#         path_type=str,
+#     ),
+#     is_eager=True,
+#     callback=read_pyproject_toml,
+#     help="Read configuration from FILE path.",
+# )
+# @click.pass_context
+# def main(  # noqa: C901
+#     ctx: click.Context,
+#     code: Optional[str],
+#     line_length: int,
+#     target_version: List[TargetVersion],
+#     check: bool,
+#     diff: bool,
+#     line_ranges: Sequence[str],
+#     color: bool,
+#     fast: bool,
+#     pyi: bool,
+#     ipynb: bool,
+#     python_cell_magics: Sequence[str],
+#     skip_source_first_line: bool,
+#     skip_string_normalization: bool,
+#     skip_magic_trailing_comma: bool,
+#     experimental_string_processing: bool,
+#     preview: bool,
+#     quiet: bool,
+#     verbose: bool,
+#     required_version: Optional[str],
+#     include: Pattern[str],
+#     exclude: Optional[Pattern[str]],
+#     extend_exclude: Optional[Pattern[str]],
+#     force_exclude: Optional[Pattern[str]],
+#     stdin_filename: Optional[str],
+#     workers: Optional[int],
+#     src: Tuple[str, ...],
+#     config: Optional[str],
+# ) -> None:
+#     """The uncompromising code formatter."""
+#     ctx.ensure_object(dict)
+
+#     if src and code is not None:
+#         out(
+#             main.get_usage(ctx)
+#             + "\n\n'SRC' and 'code' cannot be passed simultaneously."
+#         )
+#         ctx.exit(1)
+#     if not src and code is None:
+#         out(main.get_usage(ctx) + "\n\nOne of 'SRC' or 'code' is required.")
+#         ctx.exit(1)
+
+#     root, method = (
+#         find_project_root(src, stdin_filename) if code is None else (None, None)
+#     )
+#     ctx.obj["root"] = root
+
+#     if verbose:
+#         if root:
+#             out(
+#                 f"Identified `{root}` as project root containing a {method}.",
+#                 fg="blue",
+#             )
+
+#         if config:
+#             config_source = ctx.get_parameter_source("config")
+#             user_level_config = str(find_user_pyproject_toml())
+#             if config == user_level_config:
+#                 out(
+#                     "Using configuration from user-level config at "
+#                     f"'{user_level_config}'.",
+#                     fg="blue",
+#                 )
+#             elif config_source in (
+#                 ParameterSource.DEFAULT,
+#                 ParameterSource.DEFAULT_MAP,
+#             ):
+#                 out("Using configuration from project root.", fg="blue")
+#             else:
+#                 out(f"Using configuration in '{config}'.", fg="blue")
+#             if ctx.default_map:
+#                 for param, value in ctx.default_map.items():
+#                     out(f"{param}: {value}")
+
+#     error_msg = "Oh no! 💥 💔 💥"
+#     if (
+#         required_version
+#         and required_version != __version__
+#         and required_version != __version__.split(".")[0]
+#     ):
+#         err(
+#             f"{error_msg} The required version `{required_version}` does not match"
+#             f" the running version `{__version__}`!"
+#         )
+#         ctx.exit(1)
+#     if ipynb and pyi:
+#         err("Cannot pass both `pyi` and `ipynb` flags!")
+#         ctx.exit(1)
+
+#     write_back = WriteBack.from_configuration(check=check, diff=diff, color=color)
+#     if target_version:
+#         versions = set(target_version)
+#     else:
+#         # We'll autodetect later.
+#         versions = set()
+#     mode = Mode(
+#         target_versions=versions,
+#         line_length=line_length,
+#         is_pyi=pyi,
+#         is_ipynb=ipynb,
+#         skip_source_first_line=skip_source_first_line,
+#         string_normalization=not skip_string_normalization,
+#         magic_trailing_comma=not skip_magic_trailing_comma,
+#         experimental_string_processing=experimental_string_processing,
+#         preview=preview,
+#         python_cell_magics=set(python_cell_magics),
+#     )
+
+#     lines: List[Tuple[int, int]] = []
+#     if line_ranges:
+#         if ipynb:
+#             err("Cannot use --line-ranges with ipynb files.")
+#             ctx.exit(1)
+
+#         try:
+#             lines = parse_line_ranges(line_ranges)
+#         except ValueError as e:
+#             err(str(e))
+#             ctx.exit(1)
+
+#     if code is not None:
+#         # Run in quiet mode by default with -c; the extra output isn't useful.
+#         # You can still pass -v to get verbose output.
+#         quiet = True
+
+#     report = Report(check=check, diff=diff, quiet=quiet, verbose=verbose)
+
+#     if code is not None:
+#         reformat_code(
+#             content=code,
+#             fast=fast,
+#             write_back=write_back,
+#             mode=mode,
+#             report=report,
+#             lines=lines,
+#         )
+#     else:
+#         assert root is not None  # root is only None if code is not None
+#         try:
+#             sources = get_sources(
+#                 root=root,
+#                 src=src,
+#                 quiet=quiet,
+#                 verbose=verbose,
+#                 include=include,
+#                 exclude=exclude,
+#                 extend_exclude=extend_exclude,
+#                 force_exclude=force_exclude,
+#                 report=report,
+#                 stdin_filename=stdin_filename,
+#             )
+#         except GitWildMatchPatternError:
+#             ctx.exit(1)
+
+#         path_empty(
+#             sources,
+#             "No Python files are present to be formatted. Nothing to do 😴",
+#             quiet,
+#             verbose,
+#             ctx,
+#         )
+
+#         if len(sources) == 1:
+#             reformat_one(
+#                 src=sources.pop(),
+#                 fast=fast,
+#                 write_back=write_back,
+#                 mode=mode,
+#                 report=report,
+#                 lines=lines,
+#             )
+#         else:
+#             from ..black.concurrency import reformat_many
+
+#             if lines:
+#                 err("Cannot use --line-ranges to format multiple files.")
+#                 ctx.exit(1)
+#             reformat_many(
+#                 sources=sources,
+#                 fast=fast,
+#                 write_back=write_back,
+#                 mode=mode,
+#                 report=report,
+#                 workers=workers,
+#             )
+
+#     if verbose or not quiet:
+#         if code is None and (verbose or report.change_count or report.failure_count):
+#             out()
+#         out(error_msg if report.return_code else "All done! ✨ 🍰 ✨")
+#         if code is None:
+#             click.echo(str(report), err=True)
+#     ctx.exit(report.return_code)
+
+
+# def get_sources(
+#     *,
+#     root: Path,
+#     src: Tuple[str, ...],
+#     quiet: bool,
+#     verbose: bool,
+#     include: Pattern[str],
+#     exclude: Optional[Pattern[str]],
+#     extend_exclude: Optional[Pattern[str]],
+#     force_exclude: Optional[Pattern[str]],
+#     report: "Report",
+#     stdin_filename: Optional[str],
+# ) -> Set[Path]:
+#     """Compute the set of files to be formatted."""
+#     sources: Set[Path] = set()
+
+#     using_default_exclude = exclude is None
+#     exclude = re_compile_maybe_verbose(DEFAULT_EXCLUDES) if exclude is None else exclude
+#     gitignore: Optional[Dict[Path, PathSpec]] = None
+#     root_gitignore = get_gitignore(root)
+
+#     for s in src:
+#         if s == "-" and stdin_filename:
+#             path = Path(stdin_filename)
+#             is_stdin = True
+#         else:
+#             path = Path(s)
+#             is_stdin = False
+
+#         # Compare the logic here to the logic in `gen_python_files`.
+#         if is_stdin or path.is_file():
+#             root_relative_path = path.absolute().relative_to(root).as_posix()
+
+#             root_relative_path = "/" + root_relative_path
+
+#             # Hard-exclude any files that matches the `--force-exclude` regex.
+#             if path_is_excluded(root_relative_path, force_exclude):
+#                 report.path_ignored(
+#                     path, "matches the --force-exclude regular expression"
+#                 )
+#                 continue
+
+#             normalized_path: Optional[str] = normalize_path_maybe_ignore(
+#                 path, root, report
+#             )
+#             if normalized_path is None:
+#                 if verbose:
+#                     out(f'Skipping invalid source: "{normalized_path}"', fg="red")
+#                 continue
+
+#             if is_stdin:
+#                 path = Path(f"{STDIN_PLACEHOLDER}{str(path)}")
+
+#             if path.suffix == ".ipynb" and not jupyter_dependencies_are_installed(
+#                 warn=verbose or not quiet
+#             ):
+#                 continue
+
+#             if verbose:
+#                 out(f'Found input source: "{normalized_path}"', fg="blue")
+#             sources.add(path)
+#         elif path.is_dir():
+#             path = root / (path.resolve().relative_to(root))
+#             if verbose:
+#                 out(f'Found input source directory: "{path}"', fg="blue")
+
+#             if using_default_exclude:
+#                 gitignore = {
+#                     root: root_gitignore,
+#                     path: get_gitignore(path),
+#                 }
+#             sources.update(
+#                 gen_python_files(
+#                     path.iterdir(),
+#                     root,
+#                     include,
+#                     exclude,
+#                     extend_exclude,
+#                     force_exclude,
+#                     report,
+#                     gitignore,
+#                     verbose=verbose,
+#                     quiet=quiet,
+#                 )
+#             )
+#         elif s == "-":
+#             if verbose:
+#                 out("Found input source stdin", fg="blue")
+#             sources.add(path)
+#         else:
+#             err(f"invalid path: {s}")
+
+#     return sources
+
+
+# def path_empty(
+#     src: Sized, msg: str, quiet: bool, verbose: bool, ctx: click.Context
+# ) -> None:
+#     """
+#     Exit if there is no `src` provided for formatting
+#     """
+#     if not src:
+#         if verbose or not quiet:
+#             out(msg)
+#         ctx.exit(0)
 
 
 def reformat_code(

@@ -7,26 +7,25 @@ import json
 import tempfile
 from typing import Any, Optional
 
-from click import echo, style
+# from click import echo, style
 from ..mypy_extensions import mypyc_attr
 
+# @mypyc_attr(patchable=True)
+# def _out(message: Optional[str] = None, nl: bool = True, **styles: Any) -> None:
+#     if message is not None:
+#         if "bold" not in styles:
+#             styles["bold"] = True
+#         message = style(message, **styles)
+#     echo(message, nl=nl, err=True)
 
-@mypyc_attr(patchable=True)
-def _out(message: Optional[str] = None, nl: bool = True, **styles: Any) -> None:
-    if message is not None:
-        if "bold" not in styles:
-            styles["bold"] = True
-        message = style(message, **styles)
-    echo(message, nl=nl, err=True)
 
-
-@mypyc_attr(patchable=True)
-def _err(message: Optional[str] = None, nl: bool = True, **styles: Any) -> None:
-    if message is not None:
-        if "fg" not in styles:
-            styles["fg"] = "red"
-        message = style(message, **styles)
-    echo(message, nl=nl, err=True)
+# @mypyc_attr(patchable=True)
+# def _err(message: Optional[str] = None, nl: bool = True, **styles: Any) -> None:
+#     if message is not None:
+#         if "fg" not in styles:
+#             styles["fg"] = "red"
+#         message = style(message, **styles)
+#     echo(message, nl=nl, err=True)
 
 
 @mypyc_attr(patchable=True)
