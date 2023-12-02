@@ -1,11 +1,13 @@
 """
 Summarize Black runs to users.
 """
+
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
-from .output import out, err
+# from click import style
+from ..black.output import err, out
 
 
 class Changed(Enum):
@@ -43,7 +45,7 @@ class Report:
                     msg = f"{src} already well formatted, good job."
                 else:
                     msg = f"{src} wasn't modified on disk since last run."
-                out(msg)
+                out(msg, bold=False)
             self.same_count += 1
 
     def failed(self, src: Path, message: str) -> None:
@@ -53,7 +55,7 @@ class Report:
 
     def path_ignored(self, path: Path, message: str) -> None:
         if self.verbose:
-            out(f"{path} ignored: {message}")
+            out(f"{path} ignored: {message}", bold=False)
 
     @property
     def return_code(self) -> int:
@@ -90,11 +92,15 @@ class Report:
         report = []
         if self.change_count:
             s = "s" if self.change_count > 1 else ""
-            report.append(f"{self.change_count} file{s} {reformatted}")
+            report.append(
+                style(f"{self.change_count} file{s} ", bold=True, fg="blue")
+                + style(f"{reformatted}", bold=True)
+            )
+
         if self.same_count:
             s = "s" if self.same_count > 1 else ""
-            report.append(f"{self.same_count} file{s} {unchanged}")
+            report.append(style(f"{self.same_count} file{s} ", fg="blue") + unchanged)
         if self.failure_count:
             s = "s" if self.failure_count > 1 else ""
-            report.append(f"{self.failure_count} file{s} {failed}")
+            report.append(style(f"{self.failure_count} file{s} {failed}", fg="red"))
         return ", ".join(report) + "."

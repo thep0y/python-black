@@ -1,9 +1,10 @@
-import sys
 import io
 import os
-from pathlib import Path
+import sys
 from functools import lru_cache
+from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     Dict,
     Iterable,
@@ -13,9 +14,8 @@ from typing import (
     Pattern,
     Sequence,
     Tuple,
+    Union,
 )
-from .. import tomli as tomllib
-
 
 from ..mypy_extensions import mypyc_attr
 from ..packaging.specifiers import InvalidSpecifier, Specifier, SpecifierSet
@@ -23,9 +23,23 @@ from ..packaging.version import InvalidVersion, Version
 from ..pathspec import PathSpec
 from ..pathspec.patterns.gitwildmatch import GitWildMatchPatternError
 
-from .output import err
-from .report import Report
-from .mode import TargetVersion
+if sys.version_info >= (3, 11):
+    try:
+        import tomllib
+    except ImportError:
+        # Help users on older alphas
+        if not TYPE_CHECKING:
+            from ...lib import tomli as tomllib
+else:
+    from ...lib import tomli as tomllib
+
+from ..black.handle_ipynb_magics import jupyter_dependencies_are_installed
+from ..black.mode import TargetVersion
+from ..black.output import err
+from ..black.report import Report
+
+if TYPE_CHECKING:
+    import colorama  # noqa: F401
 
 
 @lru_cache
@@ -198,7 +212,7 @@ def strip_specifier_set(specifier_set: SpecifierSet) -> SpecifierSet:
     return SpecifierSet(",".join(str(s) for s in specifiers))
 
 
-@lru_cache()
+@lru_cache
 def find_user_pyproject_toml() -> Path:
     r"""Return the path to the top-level user configuration for black.
 
@@ -218,7 +232,7 @@ def find_user_pyproject_toml() -> Path:
     return user_config_path.resolve()
 
 
-@lru_cache()
+@lru_cache
 def get_gitignore(root: Path) -> PathSpec:
     """Return a PathSpec matching gitignore content if present."""
     gitignore = root / ".gitignore"
@@ -266,7 +280,6 @@ def _path_is_ignored(
     root_relative_path: str,
     root: Path,
     gitignore_dict: Dict[Path, PathSpec],
-    report: Report,
 ) -> bool:
     path = root / root_relative_path
     # Note that this logic is sensitive to the ordering of gitignore_dict. Callers must
@@ -277,9 +290,6 @@ def _path_is_ignored(
         except ValueError:
             break
         if pattern.match_file(relative_path):
-            report.path_ignored(
-                path.relative_to(root), "matches a .gitignore file content"
-            )
             return True
     return False
 
@@ -316,33 +326,36 @@ def gen_python_files(
 
     assert root.is_absolute(), f"INTERNAL ERROR: `root` must be absolute but is {root}"
     for child in paths:
-        normalized_path = normalize_path_maybe_ignore(child, root, report)
-        if normalized_path is None:
-            continue
+        root_relative_path = child.absolute().relative_to(root).as_posix()
 
         # First ignore files matching .gitignore, if passed
         if gitignore_dict and _path_is_ignored(
-            normalized_path, root, gitignore_dict, report
+            root_relative_path, root, gitignore_dict
         ):
+            report.path_ignored(child, "matches a .gitignore file content")
             continue
 
         # Then ignore with `--exclude` `--extend-exclude` and `--force-exclude` options.
-        normalized_path = "/" + normalized_path
+        root_relative_path = "/" + root_relative_path
         if child.is_dir():
-            normalized_path += "/"
+            root_relative_path += "/"
 
-        if path_is_excluded(normalized_path, exclude):
+        if path_is_excluded(root_relative_path, exclude):
             report.path_ignored(child, "matches the --exclude regular expression")
             continue
 
-        if path_is_excluded(normalized_path, extend_exclude):
+        if path_is_excluded(root_relative_path, extend_exclude):
             report.path_ignored(
                 child, "matches the --extend-exclude regular expression"
             )
             continue
 
-        if path_is_excluded(normalized_path, force_exclude):
+        if path_is_excluded(root_relative_path, force_exclude):
             report.path_ignored(child, "matches the --force-exclude regular expression")
+            continue
+
+        normalized_path = normalize_path_maybe_ignore(child, root, report)
+        if normalized_path is None:
             continue
 
         if child.is_dir():
@@ -369,14 +382,18 @@ def gen_python_files(
             )
 
         elif child.is_file():
-            include_match = include.search(normalized_path) if include else True
+            if child.suffix == ".ipynb" and not jupyter_dependencies_are_installed(
+                warn=verbose or not quiet
+            ):
+                continue
+            include_match = include.search(root_relative_path) if include else True
             if include_match:
                 yield child
 
 
 def wrap_stream_for_windows(
     f: io.TextIOWrapper,
-) -> io.TextIOWrapper:
+) -> Union[io.TextIOWrapper, "colorama.AnsiToWin32"]:
     """
     Wrap stream with colorama's wrap_stream so colors are shown on Windows.
 
@@ -385,4 +402,10 @@ def wrap_stream_for_windows(
     to be wrapped for a Windows environment and will accordingly either return
     an `AnsiToWin32` wrapper or the original stream.
     """
-    return f
+    try:
+        from colorama.initialise import wrap_stream
+    except ImportError:
+        return f
+    else:
+        # Set `strip=False` to avoid needing to modify test_express_diff_with_color.
+        return wrap_stream(f, convert=None, strip=False, autoreset=False, wrap=True)

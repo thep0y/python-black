@@ -1,6 +1,7 @@
 """
 String transformers that can split and merge strings.
 """
+
 import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -11,25 +12,25 @@ from typing import (
     ClassVar,
     Collection,
     Dict,
+    Final,
     Iterable,
     Iterator,
     List,
+    Literal,
     Optional,
     Sequence,
     Set,
     Tuple,
     TypeVar,
     Union,
-    Literal,
-    Final,
 )
 
 from ..mypy_extensions import trait
 
-from .comments import contains_pragma_comment
-from .lines import Line, append_leaves
-from .mode import Feature, Mode
-from .nodes import (
+from ..black.comments import contains_pragma_comment
+from ..black.lines import Line, append_leaves
+from ..black.mode import Feature, Mode
+from ..black.nodes import (
     CLOSING_BRACKETS,
     OPENING_BRACKETS,
     STANDALONE_COMMENT,
@@ -41,8 +42,8 @@ from .nodes import (
     replace_child,
     syms,
 )
-from .rusty import Err, Ok, Result
-from .strings import (
+from ..black.rusty import Err, Ok, Result
+from ..black.strings import (
     assert_is_leaf_string,
     count_chars_in_width,
     get_string_prefix,
@@ -389,7 +390,19 @@ class StringMerger(StringTransformer, CustomSplitMapMixin):
                 and is_valid_index(idx + 1)
                 and LL[idx + 1].type == token.STRING
             ):
-                if not is_part_of_annotation(leaf):
+                # Let's check if the string group contains an inline comment
+                # If we have a comment inline, we don't merge the strings
+                contains_comment = False
+                i = idx
+                while is_valid_index(i):
+                    if LL[i].type != token.STRING:
+                        break
+                    if line.comments_after(LL[i]):
+                        contains_comment = True
+                        break
+                    i += 1
+
+                if not is_part_of_annotation(leaf) and not contains_comment:
                     string_indices.append(idx)
 
                 # Advance to the next non-STRING leaf.
@@ -577,11 +590,22 @@ class StringMerger(StringTransformer, CustomSplitMapMixin):
             """
             assert_is_leaf_string(string)
             if "f" in string_prefix:
-                string = _toggle_fexpr_quotes(string, QUOTE)
-                # After quotes toggling, quotes in expressions won't be escaped
-                # because quotes can't be reused in f-strings. So we can simply
-                # let the escaping logic below run without knowing f-string
-                # expressions.
+                f_expressions = (
+                    string[span[0] + 1 : span[1] - 1]  # +-1 to get rid of curly braces
+                    for span in iter_fexpr_spans(string)
+                )
+                debug_expressions_contain_visible_quotes = any(
+                    re.search(r".*[\'\"].*(?<![!:=])={1}(?!=)(?![^\s:])", expression)
+                    for expression in f_expressions
+                )
+                if not debug_expressions_contain_visible_quotes:
+                    # We don't want to toggle visible quotes in debug f-strings, as
+                    # that would modify the AST
+                    string = _toggle_fexpr_quotes(string, QUOTE)
+                    # After quotes toggling, quotes in expressions won't be escaped
+                    # because quotes can't be reused in f-strings. So we can simply
+                    # let the escaping logic below run without knowing f-string
+                    # expressions.
 
             RE_EVEN_BACKSLASHES = r"(?:(?<!\\)(?:\\\\)*)"
             naked_string = string[len(string_prefix) + 1 : -1]
@@ -942,6 +966,9 @@ class StringParenStripper(StringTransformer):
                 LL[lpar_or_rpar_idx].remove()  # Remove lpar.
                 replace_child(LL[idx], string_leaf)
                 new_line.append(string_leaf)
+                # replace comments
+                old_comments = new_line.comments.pop(id(LL[idx]), [])
+                new_line.comments.setdefault(id(string_leaf), []).extend(old_comments)
             else:
                 LL[lpar_or_rpar_idx].remove()  # This is a rpar.
 
