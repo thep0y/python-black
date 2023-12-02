@@ -17,11 +17,11 @@ from typing import (
     Union,
 )
 
-from mypy_extensions import mypyc_attr
-from packaging.specifiers import InvalidSpecifier, Specifier, SpecifierSet
-from packaging.version import InvalidVersion, Version
-from pathspec import PathSpec
-from pathspec.patterns.gitwildmatch import GitWildMatchPatternError
+from ..mypy_extensions import mypyc_attr
+from ..packaging.specifiers import InvalidSpecifier, Specifier, SpecifierSet
+from ..packaging.version import InvalidVersion, Version
+from ..pathspec import PathSpec
+from ..pathspec.patterns.gitwildmatch import GitWildMatchPatternError
 
 if sys.version_info >= (3, 11):
     try:
@@ -29,14 +29,14 @@ if sys.version_info >= (3, 11):
     except ImportError:
         # Help users on older alphas
         if not TYPE_CHECKING:
-            import tomli as tomllib
+            from ...lib import tomli as tomllib
 else:
-    import tomli as tomllib
+    from ...lib import tomli as tomllib
 
-from black.handle_ipynb_magics import jupyter_dependencies_are_installed
-from black.mode import TargetVersion
-from black.output import err
-from black.report import Report
+from ..black.handle_ipynb_magics import jupyter_dependencies_are_installed
+from ..black.mode import TargetVersion
+from ..black.output import err
+from ..black.report import Report
 
 if TYPE_CHECKING:
     import colorama  # noqa: F401

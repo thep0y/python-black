@@ -9,15 +9,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Iterable, NamedTuple, Set, Tuple
 
-from platformdirs import user_cache_dir
+from ..platformdirs import user_cache_dir
 
-from _black_version import version as __version__
-from black.mode import Mode
+from .._black_version import version as __version__
+from ..black.mode import Mode
 
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
-    from typing_extensions import Self
+    from ..typing_extensions import Self
 
 
 class FileData(NamedTuple):

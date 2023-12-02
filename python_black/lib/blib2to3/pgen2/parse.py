@@ -24,14 +24,14 @@ from typing import (
     cast,
 )
 
-from blib2to3.pgen2.grammar import Grammar
-from blib2to3.pytree import NL, Context, Leaf, Node, RawNode, convert
+from ...blib2to3.pgen2.grammar import Grammar
+from ...blib2to3.pytree import NL, Context, Leaf, Node, RawNode, convert
 
 # Local imports
 from . import grammar, token, tokenize
 
 if TYPE_CHECKING:
-    from blib2to3.pgen2.driver import TokenProxy
+    from ...blib2to3.pgen2.driver import TokenProxy
 
 
 Results = Dict[str, NL]

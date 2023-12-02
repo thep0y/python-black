@@ -12,10 +12,10 @@ from typing import Dict, List, Optional, Tuple
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
 else:
-    from typing_extensions import TypeGuard
+    from ..typing_extensions import TypeGuard
 
-from black.output import out
-from black.report import NothingChanged
+from ..black.output import out
+from ..black.report import NothingChanged
 
 TRANSFORMED_MAGICS = frozenset(
     (

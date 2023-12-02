@@ -42,8 +42,8 @@ from typing import (
     cast,
 )
 
-from blib2to3.pgen2.grammar import Grammar
-from blib2to3.pgen2.token import (
+from ...blib2to3.pgen2.grammar import Grammar
+from ...blib2to3.pgen2.token import (
     ASYNC,
     AWAIT,
     COMMENT,

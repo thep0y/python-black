@@ -8,16 +8,16 @@ from typing import Final, Generic, Iterator, List, Optional, Set, Tuple, TypeVar
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
 else:
-    from typing_extensions import TypeGuard
+    from ..typing_extensions import TypeGuard
 
-from mypy_extensions import mypyc_attr
+from ..mypy_extensions import mypyc_attr
 
-from black.cache import CACHE_DIR
-from black.mode import Mode, Preview
-from black.strings import get_string_prefix, has_triple_quotes
-from blib2to3 import pygram
-from blib2to3.pgen2 import token
-from blib2to3.pytree import NL, Leaf, Node, type_repr
+from ..black.cache import CACHE_DIR
+from ..black.mode import Mode, Preview
+from ..black.strings import get_string_prefix, has_triple_quotes
+from ..blib2to3 import pygram
+from ..blib2to3.pgen2 import token
+from ..blib2to3.pytree import NL, Leaf, Node, type_repr
 
 pygram.initialize(CACHE_DIR)
 syms: Final = pygram.python_symbols

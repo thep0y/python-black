@@ -9,14 +9,14 @@ from enum import Enum, auto
 from functools import partial, wraps
 from typing import Collection, Iterator, List, Optional, Set, Union, cast
 
-from black.brackets import (
+from ..black.brackets import (
     COMMA_PRIORITY,
     DOT_PRIORITY,
     get_leaves_inside_matching_brackets,
     max_delimiter_priority_in_atom,
 )
-from black.comments import FMT_OFF, generate_comments, list_comments
-from black.lines import (
+from ..black.comments import FMT_OFF, generate_comments, list_comments
+from ..black.lines import (
     Line,
     RHSResult,
     append_leaves,
@@ -25,8 +25,8 @@ from black.lines import (
     is_line_short_enough,
     line_to_string,
 )
-from black.mode import Feature, Mode, Preview
-from black.nodes import (
+from ..black.mode import Feature, Mode, Preview
+from ..black.nodes import (
     ASSIGNMENTS,
     BRACKETS,
     CLOSING_BRACKETS,
@@ -58,15 +58,15 @@ from black.nodes import (
     syms,
     wrap_in_parentheses,
 )
-from black.numerics import normalize_numeric_literal
-from black.strings import (
+from ..black.numerics import normalize_numeric_literal
+from ..black.strings import (
     fix_docstring,
     get_string_prefix,
     normalize_string_prefix,
     normalize_string_quotes,
     normalize_unicode_escape_sequences,
 )
-from black.trans import (
+from ..black.trans import (
     CannotTransform,
     StringMerger,
     StringParenStripper,
@@ -75,8 +75,8 @@ from black.trans import (
     Transformer,
     hug_power_op,
 )
-from blib2to3.pgen2 import token
-from blib2to3.pytree import Leaf, Node
+from ..blib2to3.pgen2 import token
+from ..blib2to3.pytree import Leaf, Node
 
 # types
 LeafID = int

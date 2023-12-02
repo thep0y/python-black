@@ -30,20 +30,20 @@ from typing import (
 
 import click
 from click.core import ParameterSource
-from mypy_extensions import mypyc_attr
-from pathspec import PathSpec
-from pathspec.patterns.gitwildmatch import GitWildMatchPatternError
+from ..mypy_extensions import mypyc_attr
+from ..pathspec import PathSpec
+from ..pathspec.patterns.gitwildmatch import GitWildMatchPatternError
 
-from _black_version import version as __version__
-from black.cache import Cache
-from black.comments import normalize_fmt_off
-from black.const import (
+from .._black_version import version as __version__
+from ..black.cache import Cache
+from ..black.comments import normalize_fmt_off
+from ..black.const import (
     DEFAULT_EXCLUDES,
     DEFAULT_INCLUDES,
     DEFAULT_LINE_LENGTH,
     STDIN_PLACEHOLDER,
 )
-from black.files import (
+from ..black.files import (
     find_project_root,
     find_pyproject_toml,
     find_user_pyproject_toml,
@@ -54,7 +54,7 @@ from black.files import (
     path_is_excluded,
     wrap_stream_for_windows,
 )
-from black.handle_ipynb_magics import (
+from ..black.handle_ipynb_magics import (
     PYTHON_CELL_MAGICS,
     TRANSFORMED_MAGICS,
     jupyter_dependencies_are_installed,
@@ -63,26 +63,26 @@ from black.handle_ipynb_magics import (
     remove_trailing_semicolon,
     unmask_cell,
 )
-from black.linegen import LN, LineGenerator, transform_line
-from black.lines import EmptyLineTracker, LinesBlock
-from black.mode import FUTURE_FLAG_TO_FEATURE, VERSION_TO_FEATURES, Feature
-from black.mode import Mode as Mode  # re-exported
-from black.mode import TargetVersion, supports_feature
-from black.nodes import (
+from ..black.linegen import LN, LineGenerator, transform_line
+from ..black.lines import EmptyLineTracker, LinesBlock
+from ..black.mode import FUTURE_FLAG_TO_FEATURE, VERSION_TO_FEATURES, Feature
+from ..black.mode import Mode as Mode  # re-exported
+from ..black.mode import TargetVersion, supports_feature
+from ..black.nodes import (
     STARS,
     is_number_token,
     is_simple_decorator_expression,
     is_string_token,
     syms,
 )
-from black.output import color_diff, diff, dump_to_file, err, ipynb_diff, out
-from black.parsing import InvalidInput  # noqa F401
-from black.parsing import lib2to3_parse, parse_ast, stringify_ast
-from black.ranges import adjusted_lines, convert_unchanged_lines, parse_line_ranges
-from black.report import Changed, NothingChanged, Report
-from black.trans import iter_fexpr_spans
-from blib2to3.pgen2 import token
-from blib2to3.pytree import Leaf, Node
+from ..black.output import color_diff, diff, dump_to_file, err, ipynb_diff, out
+from ..black.parsing import InvalidInput  # noqa F401
+from ..black.parsing import lib2to3_parse, parse_ast, stringify_ast
+from ..black.ranges import adjusted_lines, convert_unchanged_lines, parse_line_ranges
+from ..black.report import Changed, NothingChanged, Report
+from ..black.trans import iter_fexpr_spans
+from ..blib2to3.pgen2 import token
+from ..blib2to3.pytree import Leaf, Node
 
 COMPILED = Path(__file__).suffix in (".pyd", ".so")
 
@@ -630,7 +630,7 @@ def main(  # noqa: C901
                 lines=lines,
             )
         else:
-            from black.concurrency import reformat_many
+            from ..black.concurrency import reformat_many
 
             if lines:
                 err("Cannot use --line-ranges to format multiple files.")

@@ -25,12 +25,12 @@ from typing import (
     Union,
 )
 
-from mypy_extensions import trait
+from ..mypy_extensions import trait
 
-from black.comments import contains_pragma_comment
-from black.lines import Line, append_leaves
-from black.mode import Feature, Mode
-from black.nodes import (
+from ..black.comments import contains_pragma_comment
+from ..black.lines import Line, append_leaves
+from ..black.mode import Feature, Mode
+from ..black.nodes import (
     CLOSING_BRACKETS,
     OPENING_BRACKETS,
     STANDALONE_COMMENT,
@@ -42,8 +42,8 @@ from black.nodes import (
     replace_child,
     syms,
 )
-from black.rusty import Err, Ok, Result
-from black.strings import (
+from ..black.rusty import Err, Ok, Result
+from ..black.strings import (
     assert_is_leaf_string,
     count_chars_in_width,
     get_string_prefix,
@@ -51,8 +51,8 @@ from black.strings import (
     normalize_string_quotes,
     str_width,
 )
-from blib2to3.pgen2 import token
-from blib2to3.pytree import Leaf, Node
+from ..blib2to3.pgen2 import token
+from ..blib2to3.pytree import Leaf, Node
 
 
 class CannotTransform(Exception):

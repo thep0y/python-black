@@ -25,7 +25,7 @@ from typing import (
     Union,
 )
 
-from blib2to3.pgen2.grammar import Grammar
+from ..blib2to3.pgen2.grammar import Grammar
 
 __author__ = "Guido van Rossum <guido@python.org>"
 
