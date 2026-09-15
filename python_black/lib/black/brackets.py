@@ -1,9 +1,9 @@
 """Builds on top of nodes.py to track brackets."""
 
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union, Final
+from typing import Dict, Final, Iterable, List, Optional, Sequence, Set, Tuple, Union
 
-from .nodes import (
+from ..black.nodes import (
     BRACKET,
     CLOSING_BRACKETS,
     COMPARATORS,
@@ -15,8 +15,8 @@ from .nodes import (
     is_vararg,
     syms,
 )
-from ..blib2to3.pytree import Leaf, Node
 from ..blib2to3.pgen2 import token
+from ..blib2to3.pytree import Leaf, Node
 
 # types
 LN = Union[Leaf, Node]
@@ -126,6 +126,13 @@ class BracketTracker:
         self.previous = leaf
         self.maybe_increment_lambda_arguments(leaf)
         self.maybe_increment_for_loop_variable(leaf)
+
+    def any_open_for_or_lambda(self) -> bool:
+        """Return True if there is an open for or lambda expression on the line.
+
+        See maybe_increment_for_loop_variable and maybe_increment_lambda_arguments
+        for details."""
+        return bool(self._for_loop_depths or self._lambda_argument_depths)
 
     def any_open_brackets(self) -> bool:
         """Return True if there is an yet unmatched open bracket on the line."""

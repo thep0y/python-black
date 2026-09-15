@@ -149,6 +149,18 @@ logger.error("...")
 
 Discussion and creation of PRs are welcome.
 
+#### Updating vendored black library
+
+To update the vendored version of black, replace the `python_black/lib/black` and
+`python_black/lib/blib2to3` directories with the newer version.
+Once replaced, the imports need to be updated to point to the vendored version.
+This can be done automatically using libcst and the RewriteImportsCommand
+
+```bash
+python -m libcst.tool --no-format codemod import.RewriteImportsCommand --relative-to python_black.lib --replace black --replace blib2to3 --replace mypy_extensions --replace pathspec --replace platformdirs --replace packaging --replace tomli --replace typing_extensions --replace _black_version python_black/lib/black/
+python -m libcst.tool --no-format codemod import.RewriteImportsCommand --relative-to python_black.lib --replace black --replace blib2to3 --replace mypy_extensions --replace pathspec --replace platformdirs --replace packaging --replace tomli --replace typing_extensions --replace _black_version python_black/lib/blib2to3/
+```
+
 ### TODO
 
 - [ ] format all python files in the current project

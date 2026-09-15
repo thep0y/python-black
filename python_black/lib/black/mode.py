@@ -8,12 +8,10 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from hashlib import sha256
 from operator import attrgetter
-from typing import Dict, Set
+from typing import Dict, Final, Set
 from warnings import warn
 
-from typing import Final
-
-from .const import DEFAULT_LINE_LENGTH
+from ..black.const import DEFAULT_LINE_LENGTH
 
 
 class TargetVersion(Enum):
@@ -172,6 +170,7 @@ class Preview(Enum):
 
     add_trailing_comma_consistently = auto()
     blank_line_after_nested_stub_class = auto()
+    blank_line_between_nested_and_def_stub_file = auto()
     hex_codes_in_unicode_sequences = auto()
     improved_async_statements_handling = auto()
     multiline_string_handling = auto()
@@ -181,9 +180,20 @@ class Preview(Enum):
     # for https://github.com/psf/black/issues/3117 to be fixed.
     string_processing = auto()
     parenthesize_conditional_expressions = auto()
+    parenthesize_long_type_hints = auto()
+    respect_magic_trailing_comma_in_return_type = auto()
     skip_magic_trailing_comma_in_subscript = auto()
     wrap_long_dict_values_in_parens = auto()
     wrap_multiple_context_managers_in_parens = auto()
+    dummy_implementations = auto()
+    walrus_subscript = auto()
+    module_docstring_newlines = auto()
+    accept_raw_docstrings = auto()
+    fix_power_op_line_length = auto()
+    hug_parens_with_braces_and_square_brackets = auto()
+    allow_empty_first_line_before_new_block_or_comment = auto()
+    single_line_format_skip_with_multiple_comments = auto()
+    long_case_block_line_splitting = auto()
 
 
 class Deprecated(UserWarning):

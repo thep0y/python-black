@@ -16,13 +16,13 @@ fallback token code OP, but the parser needs the actual token code.
 import os
 import pickle
 import tempfile
-from typing import Any, Dict, List, Optional, Text, Tuple, TypeVar, Union
+from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
 # Local imports
 from . import token
 
 _P = TypeVar("_P", bound="Grammar")
-Label = Tuple[int, Optional[Text]]
+Label = Tuple[int, Optional[str]]
 DFA = List[List[Tuple[int, int]]]
 DFAS = Tuple[DFA, Dict[int, int]]
 Path = Union[str, "os.PathLike[str]"]
