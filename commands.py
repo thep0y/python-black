@@ -42,6 +42,8 @@ logger.info(
 
 class BlackCommand(sublime_plugin.TextCommand):
     def is_visible(self, *args):
+        if not self.view.sel():
+            return False
         region = self.view.sel()[0]
         return self.view.match_selector(region.b, "source.python")
 
