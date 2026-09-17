@@ -9,6 +9,7 @@ class BlackConfig(TypedDict):
     target_version: List[str]
     line_length: int
     is_pyi: bool
+    preview: bool
     skip_source_first_line: bool
     skip_string_normalization: bool
     skip_magic_trailing_comma: bool
